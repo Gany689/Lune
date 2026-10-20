@@ -1,0 +1,1006 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<meta name="referrer" content="no-referrer">
+<style>[hidden]{display:none!important}:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font-size:14px}img{max-width:100%}</style>
+<title>Le Jeu de la Lune</title>
+<meta name="theme-color" content="#0B7A78">
+<meta name="apple-mobile-web-app-title" content="Lune">
+<style>
+/* Layout: one narrow phone column — header with two clocks, a stack of moon-phase sessions, bottom tab bar, cards open as a bottom sheet. */
+:root{
+  --paper:#EAF0EE; --surface:#FAFCFB; --ink:#16303A; --muted:#5A6E75; --line:#CBD8D6;
+  --lagoon:#0B7A78; --lagoon-soft:#CFE9E6; --marigold:#D98C06; --marigold-soft:#FBE7BE;
+  --mine:#2A5FC4; --mine-ink:#FFFFFF;
+  --lv-e:#2F7DD9; --lv-p:#2C9A57; --lv-d:#CF4436;
+  --moon-dark:#C2CFCD; --moon-lit:#F3D58A;
+  --shadow:0 10px 30px rgba(22,48,58,.14);
+  --f-display:ui-rounded,"SF Pro Rounded","Sukhumvit Set","Noto Sans Thai",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-body:system-ui,-apple-system,"Sukhumvit Set","Thonburi","Noto Sans Thai","Segoe UI",Roboto,sans-serif;
+  --f-mono:ui-monospace,Menlo,Consolas,"Roboto Mono",monospace;
+  --fs-xs:.75rem; --fs-s:.875rem; --fs-m:1rem; --fs-l:1.25rem; --fs-xl:1.6rem; --fs-xxl:2.2rem;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --paper:#0E1A1F; --surface:#15252C; --ink:#E4EEEC; --muted:#93A8AD; --line:#26404A;
+  --lagoon:#3CC0B4; --lagoon-soft:#16413F; --marigold:#F2B43C; --marigold-soft:#3D3115;
+  --mine:#5B8BEA; --mine-ink:#0E1A1F;
+  --lv-e:#5C9DF0; --lv-p:#4CC07A; --lv-d:#F06A5B;
+  --moon-dark:#26404A; --moon-lit:#F3D58A;
+  --shadow:0 10px 30px rgba(0,0,0,.45); color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --paper:#0E1A1F; --surface:#15252C; --ink:#E4EEEC; --muted:#93A8AD; --line:#26404A;
+  --lagoon:#3CC0B4; --lagoon-soft:#16413F; --marigold:#F2B43C; --marigold-soft:#3D3115;
+  --mine:#5B8BEA; --mine-ink:#0E1A1F;
+  --lv-e:#5C9DF0; --lv-p:#4CC07A; --lv-d:#F06A5B;
+  --moon-dark:#26404A; --moon-lit:#F3D58A;
+  --shadow:0 10px 30px rgba(0,0,0,.45); color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{min-height:100%}
+body{background:var(--paper);color:var(--ink);font-family:var(--f-body);font-size:var(--fs-m);line-height:1.55;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--paper)}
+.wrap{max-width:640px;margin:0 auto;padding-block:14px 110px}
+h1,h2,h3{font-family:var(--f-display);text-wrap:balance;margin:0;line-height:1.25}
+button,input,textarea,select{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:3px solid var(--marigold);outline-offset:2px}
+.mono{font-family:var(--f-mono);font-size:var(--fs-xs);letter-spacing:.06em;text-transform:uppercase}
+.muted{color:var(--muted)}
+.stack{display:flex;flex-direction:column;gap:12px}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+
+/* header */
+.top{display:flex;align-items:center;gap:12px;padding-block:6px 14px}
+.top h1{font-size:var(--fs-l);font-weight:700}
+.clocks{font-family:var(--f-mono);font-size:var(--fs-xs);color:var(--muted);font-variant-numeric:tabular-nums;line-height:1.4}
+.clocks b{color:var(--ink);font-weight:500}
+.banner{background:var(--marigold-soft);border-radius:12px;padding:10px 12px;font-size:var(--fs-s)}
+
+/* hero news */
+.news{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:14px 16px;display:flex;flex-direction:column;gap:6px}
+.news .big{font-family:var(--f-display);font-size:var(--fs-l);font-weight:600}
+
+/* sessions */
+.session{display:flex;flex-direction:column;gap:10px;padding-block:6px}
+.s-head{display:flex;align-items:center;gap:12px}
+.s-head svg{flex:0 0 auto}
+.s-head h2{font-size:var(--fs-l);font-weight:600}
+.s-head .mono{display:block}
+.tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.tile{position:relative;text-align:left;border:1.5px solid var(--line);background:var(--surface);border-radius:14px;padding:10px 12px 12px;display:flex;flex-direction:column;gap:6px;min-width:0;min-height:110px}
+.tile:hover{border-color:var(--lagoon)}
+.tile .q{font-size:var(--fs-s);display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.tile .meta{display:flex;align-items:center;gap:6px;color:var(--muted)}
+.dot{width:9px;height:9px;border-radius:50%;flex:0 0 auto}
+.lv-e{background:var(--lv-e)} .lv-p{background:var(--lv-p)} .lv-d{background:var(--lv-d)}
+.tile.half{background:linear-gradient(90deg,var(--lagoon-soft) 50%,var(--surface) 50%)}
+.tile.both{background:var(--lagoon-soft);border-color:var(--lagoon)}
+.tag{position:absolute;top:-9px;right:10px;font-family:var(--f-mono);font-size:.68rem;letter-spacing:.05em;text-transform:uppercase;background:var(--marigold);color:#1d1400;border-radius:999px;padding:1px 8px}
+.locked{border:1.5px dashed var(--line);border-radius:14px;padding:14px;color:var(--muted);font-size:var(--fs-s)}
+
+.chips{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;scrollbar-width:none}
+.chips::-webkit-scrollbar{display:none}
+.chip{flex:0 0 auto;border:1.5px solid var(--line);background:var(--surface);border-radius:999px;padding:7px 14px;font-family:var(--f-display);font-weight:500;font-size:var(--fs-s);white-space:nowrap}
+.chip[aria-selected="true"]{background:var(--ink);border-color:var(--ink);color:var(--paper)}
+.chip .cnt{display:inline-block;min-width:1.4em;border-radius:999px;background:var(--marigold);color:#1d1400;font-size:.7rem;padding:0 5px;text-align:center}
+/* panels */
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:10px}
+.panel h2{font-size:var(--fs-l);font-weight:600}
+.bignum{font-family:var(--f-display);font-size:var(--fs-xxl);font-weight:700;line-height:1;font-variant-numeric:tabular-nums}
+.bar{height:10px;border-radius:999px;background:var(--lagoon-soft);overflow:hidden}
+.bar i{display:block;height:100%;background:var(--lagoon);border-radius:999px}
+.reward{display:flex;gap:10px;align-items:flex-start;padding-block:6px;border-top:1px solid var(--line)}
+.reward:first-of-type{border-top:0}
+.reward .pts{font-family:var(--f-mono);font-size:var(--fs-xs);min-width:56px;padding-top:3px;font-variant-numeric:tabular-nums}
+.reward.won .pts{color:var(--lagoon);font-weight:500}
+.reward small{display:block;color:var(--lagoon);font-size:var(--fs-xs)}
+.jokers{font-size:1.4rem;letter-spacing:4px}
+.jokers .off{opacity:.25}
+ul.rules{margin:0;padding-left:1.1em;display:flex;flex-direction:column;gap:6px;font-size:var(--fs-s)}
+
+/* forms */
+label{font-size:var(--fs-s);color:var(--muted);display:flex;flex-direction:column;gap:4px}
+input,textarea,select{background:var(--paper);border:1.5px solid var(--line);border-radius:12px;padding:10px 12px;width:100%}
+textarea{min-height:110px;resize:vertical}
+input:focus,textarea:focus,select:focus{border-color:var(--lagoon);outline:none}
+.btn{border:0;border-radius:12px;padding:11px 16px;background:var(--lagoon);color:var(--surface);font-weight:600}
+.btn.ghost{background:transparent;border:1.5px solid var(--line);color:var(--ink);font-weight:500}
+.btn.small{padding:7px 12px;font-size:var(--fs-s)}
+.btn:disabled{opacity:.5;cursor:default}
+
+/* tabs */
+.tabs{position:fixed;left:0;right:0;bottom:0;z-index:5;background:var(--surface);border-top:1px solid var(--line);
+  padding:8px max(16px,env(safe-area-inset-right,0px)) calc(8px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));display:flex;justify-content:center;gap:6px}
+.tabs button{flex:1;max-width:200px;border:0;background:transparent;border-radius:12px;padding:8px;font-weight:500;color:var(--muted);font-family:var(--f-display)}
+.tabs button[aria-current="true"]{background:var(--lagoon-soft);color:var(--ink)}
+
+/* sheet */
+.scrim{position:fixed;inset:0;background:rgba(10,20,25,.5);z-index:20;display:flex;align-items:flex-end;justify-content:center}
+.sheet{background:var(--surface);width:100%;max-width:640px;max-height:92%;overflow:auto;border-radius:22px 22px 0 0;box-shadow:var(--shadow);
+  padding:18px max(18px,env(safe-area-inset-right,0px)) calc(24px + env(safe-area-inset-bottom,0px)) max(18px,env(safe-area-inset-left,0px));display:flex;flex-direction:column;gap:14px}
+.sheet .qbig{font-family:var(--f-display);font-size:var(--fs-xl);font-weight:600;line-height:1.3}
+.sheet .alt{font-size:var(--fs-s);color:var(--muted);border-left:3px solid var(--line);padding-left:10px}
+.linkbtn{background:none;border:0;padding:0;color:var(--lagoon);font-size:var(--fs-s);text-decoration:underline;text-underline-offset:3px;align-self:flex-start}
+.opts{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+@media (max-width:380px){.opts{grid-template-columns:1fr}}
+.opt{text-align:left;border:1.5px solid var(--line);background:var(--paper);border-radius:12px;padding:10px 12px;font-size:var(--fs-s);min-width:0}
+.opt.g{border-color:var(--marigold);box-shadow:0 0 0 3px var(--marigold-soft)}
+.opt.m{background:var(--mine);border-color:var(--mine);color:var(--mine-ink)}
+.step{font-weight:600;font-size:var(--fs-s)}
+.step.g{color:var(--marigold)} .step.m{color:var(--mine)}
+.duo{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media (max-width:420px){.duo{grid-template-columns:1fr}}
+.ans{background:var(--paper);border-radius:14px;padding:12px;display:flex;flex-direction:column;gap:6px;min-width:0}
+.ans .who{font-family:var(--f-display);font-weight:600}
+.ans p{margin:0;white-space:pre-wrap;overflow-wrap:anywhere}
+.ok{color:var(--lagoon);font-weight:600} .ko{color:var(--lv-d);font-weight:600}
+.verdict{font-family:var(--f-display);font-size:var(--fs-l);font-weight:600;text-align:center;padding-block:4px}
+.fact{background:var(--marigold-soft);border-radius:14px;padding:12px 14px;font-size:var(--fs-s)}
+.talk{background:var(--lagoon-soft);border-radius:14px;padding:12px 14px;font-size:var(--fs-s)}
+.wait{text-align:center;color:var(--muted);padding:10px;font-style:italic}
+.reacts{display:flex;gap:6px;flex-wrap:wrap}
+.reacts button{border:1.5px solid var(--line);background:var(--paper);border-radius:999px;padding:4px 10px;font-size:1.2rem}
+.reacts button[aria-pressed="true"]{border-color:var(--lagoon);background:var(--lagoon-soft)}
+.star-note{background:var(--marigold-soft);border-radius:12px;padding:10px 12px;font-weight:600;font-size:var(--fs-s)}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(84px + env(safe-area-inset-bottom,0px));z-index:30;background:var(--ink);color:var(--paper);border-radius:999px;padding:8px 16px;font-size:var(--fs-s);max-width:90%;text-align:center}
+.center{min-height:60vh;display:flex;flex-direction:column;justify-content:center;gap:14px}
+.who-pick{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.who-pick button{border:1.5px solid var(--line);background:var(--surface);border-radius:16px;padding:18px 12px;font-family:var(--f-display);font-weight:600}
+.who-pick button[aria-pressed="true"]{border-color:var(--lagoon);background:var(--lagoon-soft)}
+@media (prefers-reduced-motion:no-preference){.sheet{animation:up .22s ease-out}@keyframes up{from{transform:translateY(30px);opacity:.6}to{transform:none;opacity:1}}}
+</style>
+</head>
+<body>
+
+
+<div class="wrap">
+  <header class="top">
+    <span id="logo"></span>
+    <div style="min-width:0">
+      <h1 id="brand">Le Jeu de la Lune</h1>
+      <div class="clocks" id="clocks"></div>
+    </div>
+  </header>
+  <main id="view"><div class="center"><p class="muted">Chargement… · กำลังโหลด…</p></div></main>
+</div>
+<nav class="tabs" id="tabs" hidden></nav>
+<div id="scrim" class="scrim" hidden></div>
+<div id="toast" class="toast" hidden></div>
+
+<script>
+/* ---------- contenu ---------- */
+const T=(fr,th)=>({fr,th});
+const CARDS=[
+/* Session 1 */
+{id:'c01',s:1,lvl:'e',t:'guess',q:T("Au réveil, je suis plutôt…","ตอนตื่นนอน ฉันเป็นแบบไหน"),
+ o:[T("Un rayon de soleil ☀️","แสงแดดยามเช้า ☀️"),T("Un zombie tant que je n'ai pas mangé 🧟","ซอมบี้จนกว่าจะได้กินข้าว 🧟"),T("Je repousse le réveil 5 fois 😴","กดเลื่อนนาฬิกาปลุก 5 รอบ 😴"),T("Je regarde mon téléphone direct 📱","เปิดมือถือทันที 📱")],
+ fact:T("Repousser son réveil ne repose pas plus : un sommeil coupé en petits morceaux récupère moins bien.","การกดเลื่อนนาฬิกาปลุกไม่ได้ทำให้พักผ่อนมากขึ้น เพราะการนอนที่ขาดเป็นช่วงๆ ฟื้นฟูร่างกายได้น้อยกว่า"),
+ talk:T("Raconte ton pire réveil.","เล่าการตื่นนอนที่แย่ที่สุดของเธอ")},
+{id:'c02',s:1,lvl:'e',t:'guess',q:T("Si j'étais un plat, je serais…","ถ้าฉันเป็นอาหาร ฉันจะเป็น…"),
+ o:[T("Un pad thaï 🍜","ผัดไทย 🍜"),T("Un poisson cru au lait de coco 🐟","ปลาดิบราดกะทิแบบตาฮีตี 🐟"),T("Une pizza 🍕","พิซซ่า 🍕"),T("Un croissant 🥐","ครัวซองต์ 🥐")],
+ talk:T("Quel plat veux-tu qu'on cuisine ensemble quand on se revoit ?","อยากทำอาหารอะไรด้วยกันตอนเจอกันครั้งหน้า")},
+{id:'c03',s:1,lvl:'e',t:'talk',q:T("Quel est le surnom le plus ridicule qu'on t'ait donné ?","ชื่อเล่นที่ตลกที่สุดที่เคยมีคนเรียกเธอคืออะไร")},
+{id:'c04',s:1,lvl:'e',t:'dare',q:T("Envoie un vocal où tu dis « je t'aime » dans la langue de l'autre, avec ton meilleur accent.","ส่งข้อความเสียงพูดว่า 'ฉันรักเธอ' เป็นภาษาของอีกฝ่าย ด้วยสำเนียงที่ดีที่สุดของเธอ")},
+{id:'c05',s:1,lvl:'e',t:'guess',q:T("Mon super-pouvoir secret, c'est…","พลังพิเศษลับๆ ของฉันคือ…"),
+ o:[T("Dormir n'importe où 😪","นอนได้ทุกที่ 😪"),T("Trouver les meilleures promos 🛍️","หาของลดราคาเก่ง 🛍️"),T("Manger épicé sans pleurer 🌶️","กินเผ็ดได้ไม่ร้องไห้ 🌶️"),T("Avoir raison. Toujours. 😇","ถูกเสมอ ทุกครั้ง 😇")]},
+{id:'c06',s:1,lvl:'e',t:'guess',q:T("En vacances ensemble, je serais celui ou celle qui…","ถ้าไปเที่ยวด้วยกัน ฉันจะเป็นคนที่…"),
+ o:[T("Planifie tout à la minute 📋","วางแผนทุกนาที 📋"),T("Se perd en 10 minutes 🗺️","หลงทางภายใน 10 นาที 🗺️"),T("Prend 400 photos 📸","ถ่ายรูป 400 รูป 📸"),T("Dort sur la plage 🏖️","นอนบนชายหาด 🏖️")]},
+{id:'c07',s:1,lvl:'e',t:'talk',q:T("Qu'as-tu fait aujourd'hui que je n'aurais jamais deviné ?","วันนี้เธอทำอะไรที่ฉันคงเดาไม่ถูก")},
+{id:'c08',s:1,lvl:'e',t:'dare',q:T("Dessine l'autre de mémoire en 30 secondes et envoie la photo. Interdit de s'excuser.","วาดรูปอีกฝ่ายจากความจำใน 30 วินาที แล้วส่งรูปมา ห้ามขอโทษ")},
+/* Session 2 */
+{id:'c09',s:2,lvl:'p',t:'guess',q:T("Ce qui me manque le plus de toi en ce moment…","สิ่งที่ฉันคิดถึงในตัวเธอที่สุดตอนนี้…"),
+ o:[T("Ton rire","เสียงหัวเราะของเธอ"),T("Tes câlins","อ้อมกอดของเธอ"),T("Manger avec toi","การกินข้าวด้วยกัน"),T("Ne rien faire ensemble","การไม่ทำอะไรเลยด้วยกัน")],
+ fact:T("Selon une étude, entendre la voix d'un proche fait baisser l'hormone du stress presque autant qu'un câlin. Les vocaux comptent.","มีงานวิจัยบอกว่า การได้ยินเสียงคนที่รักช่วยลดฮอร์โมนความเครียดได้เกือบเท่ากับการกอด ข้อความเสียงจึงสำคัญนะ")},
+{id:'c10',s:2,lvl:'p',t:'talk',q:T("Quel moment de notre histoire tu revis le plus souvent dans ta tête ?","ช่วงเวลาไหนของเราที่เธอนึกถึงบ่อยที่สุด")},
+{id:'c11',s:2,lvl:'e',t:'guess',q:T("Notre plus grosse dispute serait à propos de…","ถ้าเราทะเลาะกันหนักๆ น่าจะเป็นเรื่อง…"),
+ o:[T("La clim (trop froid, trop chaud) ❄️","แอร์ (หนาวไป ร้อนไป) ❄️"),T("Qui a mangé le dernier morceau 🍰","ใครกินชิ้นสุดท้าย 🍰"),T("Être en retard ⏰","มาสาย ⏰"),T("Le choix du film 🎬","เลือกหนัง 🎬")]},
+{id:'c12',s:2,lvl:'e',t:'dare',q:T("Fais visiter ta chambre en vidéo ou en vocal, comme un agent immobilier beaucoup trop enthousiaste.","พาทัวร์ห้องของเธอผ่านวิดีโอหรือข้อความเสียง เหมือนนายหน้าขายบ้านที่ตื่นเต้นเกินเหตุ")},
+{id:'c13',s:2,lvl:'p',t:'guess',q:T("Quand je suis triste, ce qui m'aide le plus…","เวลาฉันเศร้า สิ่งที่ช่วยได้มากที่สุดคือ…"),
+ o:[T("Qu'on m'écoute, sans conseils","มีคนฟังโดยไม่ต้องให้คำแนะนำ"),T("Qu'on me fasse rire","มีคนทำให้หัวเราะ"),T("Être seul(e) un moment","ได้อยู่คนเดียวสักพัก"),T("Manger quelque chose de bon","ได้กินของอร่อย")],
+ talk:T("Comment je peux mieux t'aider, à distance, quand ça ne va pas ?","เวลาเธอไม่สบายใจ ฉันช่วยจากที่ไกลได้ยังไงบ้าง")},
+{id:'c14',s:2,lvl:'e',t:'talk',q:T("Apprends-moi un mot de ta langue que j'adorerais, et dis-moi quand l'utiliser.","สอนคำในภาษาของเธอที่ฉันน่าจะชอบ และบอกว่าใช้ตอนไหน"),
+ fact:T("Le thaï « kreng jai » n'a pas d'équivalent en français : hésiter à déranger quelqu'un, par respect pour lui.","คำว่า 'เกรงใจ' ไม่มีคำแปลตรงๆ ในภาษาฝรั่งเศส คนฝรั่งเศสต้องอธิบายเป็นประโยคยาวๆ")},
+{id:'c15',s:2,lvl:'p',t:'guess',q:T("Le petit geste de toi qui me fait fondre…","สิ่งเล็กๆ ที่เธอทำแล้วฉันใจละลาย…"),
+ o:[T("Un message au réveil","ข้อความตอนตื่นนอน"),T("Quand tu te souviens d'un détail","เวลาเธอจำรายละเอียดเล็กๆ ได้"),T("Ta tête quand tu ris","หน้าเธอตอนหัวเราะ"),T("Quand tu m'appelles par un surnom","เวลาเธอเรียกชื่อเล่นฉัน")]},
+/* Session 3 */
+{id:'c16',s:3,lvl:'p',t:'talk',q:T("Qu'est-ce qui te fait le plus peur dans la distance ? On a le droit d'être honnête.","อะไรทำให้เธอกลัวที่สุดเรื่องการอยู่ห่างกัน พูดตรงๆ ได้เลย")},
+{id:'c17',s:3,lvl:'p',t:'guess',q:T("Notre premier matin ensemble après les retrouvailles, je voudrais…","เช้าแรกที่ได้อยู่ด้วยกันหลังจากเจอกัน ฉันอยาก…"),
+ o:[T("Rester au lit jusqu'à midi","นอนจนเที่ยง"),T("Un petit-déj au marché","กินข้าวเช้าที่ตลาด"),T("Aller voir la mer","ไปดูทะเล"),T("Ne rien dire, juste se regarder","ไม่พูดอะไร แค่มองหน้ากัน")]},
+{id:'c18',s:3,lvl:'p',t:'dare',q:T("Écris 3 choses que tu aimes chez l'autre, dont une vraiment bizarre.","เขียน 3 อย่างที่เธอชอบในตัวอีกฝ่าย ต้องมีหนึ่งอย่างที่แปลกมากๆ")},
+{id:'c19',s:3,lvl:'p',t:'guess',q:T("Dans 5 ans, je nous imagine…","อีก 5 ปี ฉันนึกภาพเราว่า…"),
+ o:[T("Dans le même pays, enfin","อยู่ประเทศเดียวกันในที่สุด"),T("Avec un chien qui nous donne des ordres","มีหมาที่เป็นเจ้านายเรา"),T("En voyage permanent","เดินทางไปเรื่อยๆ"),T("Je n'ose pas encore imaginer","ยังไม่กล้านึกภาพเลย")]},
+{id:'c20',s:3,lvl:'p',t:'talk',q:T("Quelle habitude de ta famille aimerais-tu garder dans notre couple ?","ธรรมเนียมอะไรในครอบครัวเธอที่อยากเก็บไว้ในความสัมพันธ์ของเรา")},
+{id:'c21',s:3,lvl:'e',t:'guess',q:T("Si on ouvrait un restaurant ensemble, il s'appellerait…","ถ้าเราเปิดร้านอาหารด้วยกัน ร้านจะชื่อ…"),
+ o:[T("La Lune Épicée","พระจันทร์เผ็ด"),T("Chéri a faim","ที่รักหิวแล้ว"),T("Pas de dispute en cuisine","ห้ามทะเลาะในครัว"),T("Pad & Poisson","ผัดกับปลา")]},
+/* Session 4 */
+{id:'c22',s:4,lvl:'d',t:'talk',q:T("Quand t'es-tu senti(e) le plus loin de moi, et pourquoi ?","ตอนไหนที่เธอรู้สึกห่างจากฉันที่สุด เพราะอะไร")},
+{id:'c23',s:4,lvl:'p',t:'guess',q:T("La phrase que j'ai le plus de mal à dire…","ประโยคที่ฉันพูดยากที่สุดคือ…"),
+ o:[T("« Je suis jaloux / jalouse »","'ฉันหึง'"),T("« J'ai besoin de toi »","'ฉันต้องการเธอ'"),T("« Je suis fatigué(e) »","'ฉันเหนื่อย'"),T("« C'est moi qui ai tort »","'ฉันผิดเอง'")],
+ talk:T("Dis-la maintenant, pour t'entraîner. Promis, personne ne rit.","ลองพูดตอนนี้เลย ฝึกไว้ สัญญาว่าไม่มีใครหัวเราะ")},
+{id:'c24',s:4,lvl:'p',t:'dare',q:T("Envoie la photo de quelque chose qui t'a fait penser à l'autre cette semaine, et explique.","ส่งรูปของบางอย่างที่ทำให้นึกถึงอีกฝ่ายในสัปดาห์นี้ แล้วเล่าว่าทำไม")},
+{id:'c25',s:4,lvl:'d',t:'talk',q:T("Qu'est-ce que tu n'as jamais osé me demander ?","มีอะไรที่เธอไม่เคยกล้าถามฉันบ้าง")},
+{id:'c26',s:4,lvl:'p',t:'guess',q:T("Ma façon préférée de recevoir de l'amour…","วิธีที่ฉันชอบรับความรักที่สุด…"),
+ o:[T("Les mots","คำพูด"),T("Le temps passé ensemble","เวลาที่อยู่ด้วยกัน"),T("Le contact","การสัมผัส"),T("Les petites attentions","ความใส่ใจเล็กๆ น้อยๆ")],
+ fact:T("L'idée des « 5 langages de l'amour » vient d'un livre de Gary Chapman (1992). Le cinquième, c'est rendre service.","แนวคิด 'ภาษารัก 5 แบบ' มาจากหนังสือของแกรี แชปแมน ปี 1992 แบบที่ห้าคือการช่วยทำสิ่งต่างๆ ให้")},
+{id:'c27',s:4,lvl:'p',t:'talk',q:T("Raconte un souvenir d'enfance qui explique un peu qui tu es.","เล่าความทรงจำวัยเด็กที่อธิบายว่าทำไมเธอเป็นคนแบบนี้")},
+/* Session 5 */
+{id:'c28',s:5,lvl:'d',t:'talk',q:T("Qu'aimerais-tu que je comprenne de ta culture, et que je ne vois pas encore ?","มีอะไรในวัฒนธรรมของเธอที่อยากให้ฉันเข้าใจ แต่ฉันยังมองไม่เห็น")},
+{id:'c29',s:5,lvl:'d',t:'guess',q:T("Le jour où on vivra ensemble, ce qui me fera le plus peur…","วันที่เราได้อยู่ด้วยกัน สิ่งที่ฉันจะกลัวที่สุดคือ…"),
+ o:[T("Perdre un peu ma liberté","เสียอิสระไปบ้าง"),T("Être loin de ma famille","อยู่ไกลครอบครัว"),T("Qu'on s'ennuie","เราจะเบื่อกัน"),T("Rien, j'ai hâte","ไม่กลัวเลย รอไม่ไหวแล้ว")]},
+{id:'c30',s:5,lvl:'d',t:'talk',q:T("Quelle promesse peux-tu me faire pour les 3 prochains mois ? Une vraie, faisable.","เธอสัญญาอะไรกับฉันได้บ้างใน 3 เดือนข้างหน้า ขอแบบที่ทำได้จริง")},
+{id:'c31',s:5,lvl:'p',t:'dare',q:T("Enregistre un vocal d'une minute : « ce que je te dirais si tu étais là ce soir ».","อัดเสียง 1 นาที: 'สิ่งที่ฉันจะพูด ถ้าเธออยู่ตรงนี้คืนนี้'")},
+{id:'c32',s:5,lvl:'d',t:'talk',q:T("Qu'est-ce qui t'aide à me faire confiance, et qu'est-ce qui te fait parfois douter ?","อะไรทำให้เธอไว้ใจฉัน และอะไรที่บางครั้งทำให้เธอสงสัย")},
+/* Session 6 */
+{id:'c33',s:6,lvl:'d',t:'talk',q:T("Écris le message que tu voudrais recevoir un jour difficile. Je le garderai.","เขียนข้อความที่เธออยากได้รับในวันที่แย่ ฉันจะเก็บไว้")},
+{id:'c34',s:6,lvl:'d',t:'guess',q:T("Ce qui nous rend solides, c'est surtout…","สิ่งที่ทำให้เราแข็งแรงที่สุดคือ…"),
+ o:[T("On rit des mêmes bêtises","เราหัวเราะเรื่องโง่ๆ เหมือนกัน"),T("On se parle vraiment","เราคุยกันจริงๆ"),T("On a choisi d'y croire","เราเลือกที่จะเชื่อ"),T("On est têtus tous les deux","เราดื้อทั้งคู่")]},
+{id:'c35',s:6,lvl:'d',t:'talk',q:T("Décris une journée normale de notre vie dans un an, du réveil au coucher.","เล่าวันธรรมดาหนึ่งวันของเราในอีกหนึ่งปี ตั้งแต่ตื่นจนเข้านอน")},
+{id:'c36',s:6,lvl:'d',t:'dare',q:T("Choisissez ensemble la date de vos prochaines retrouvailles, même approximative, et notez-la dans l'onglet « Nous ».","เลือกวันที่จะเจอกันครั้งหน้าด้วยกัน ประมาณก็ได้ แล้วใส่ไว้ในแท็บ 'เรา'")}
+];
+/* Catégories à choisir */
+const CATS=[
+ {k:'parcours',n:T("Le parcours","เส้นทางของเรา"),d:T("6 sessions qui s'ouvrent l'une après l'autre, du plus léger au plus profond.","6 รอบที่เปิดทีละรอบ จากเบาๆ ไปจนถึงลึกซึ้ง")},
+ {k:'rire',n:T("Fous rires","หัวเราะกัน"),d:T("Pour les soirs où on a juste envie de rire.","สำหรับคืนที่อยากหัวเราะอย่างเดียว")},
+ {k:'culture',n:T("France × Thaïlande","ฝรั่งเศส × ไทย"),d:T("Les valeurs, la politesse, la table, les fêtes et la famille, face à face. Des quiz pour comprendre l'autre, et des questions pour en parler.","ค่านิยม มารยาท อาหาร เทศกาล และครอบครัว เทียบกันสองประเทศ ควิซเพื่อเข้าใจกัน และคำถามชวนคุย")},
+ {k:'avenir',n:T("Notre avenir","อนาคตของเรา"),d:T("Pays, enfants, argent, familles : les vraies questions, posées calmement.","ประเทศ ลูก เงิน ครอบครัว คำถามจริงจังที่คุยกันแบบใจเย็น")},
+ {k:'vie',n:T("Histoire & valeurs","ชีวิตและค่านิยม"),d:T("Ce qui vous a construits, et ce qui compte vraiment.","สิ่งที่หล่อหลอมเรา และสิ่งที่สำคัญจริงๆ")},
+ {k:'intime',n:T("Tendresse & désir","ความอ่อนโยนและความปรารถนา"),d:T("Pour les adultes que vous êtes. S'ouvre seulement si vous dites oui tous les deux.","สำหรับผู้ใหญ่อย่างเรา เปิดเมื่อเราตอบตกลงทั้งคู่เท่านั้น")},
+ {k:'maison',n:T("Nos cartes maison","การ์ดที่เราเขียนเอง"),d:T("Les questions que vous écrivez l'un pour l'autre.","คำถามที่เราเขียนให้กันเอง")}
+];
+CARDS.push(
+/* Fous rires */
+{id:'r01',cat:'rire',lvl:'e',t:'guess',q:T("Si j'étais célèbre, ce serait pour…","ถ้าฉันดัง น่าจะดังเพราะ…"),
+ o:[T("Une recette ratée devenue virale","สูตรอาหารพังที่ดังในเน็ต"),T("M'être endormi(e) en plein concert","หลับกลางคอนเสิร์ต"),T("Un talent totalement inutile","พรสวรรค์ที่ไม่มีประโยชน์เลย"),T("Avoir raté le même avion 3 fois","ตกเครื่องบินลำเดิม 3 ครั้ง")]},
+{id:'r02',cat:'rire',lvl:'e',t:'talk',q:T("Raconte ta honte la plus drôle en public.","เล่าเรื่องขายหน้าที่ตลกที่สุดของเธอในที่สาธารณะ")},
+{id:'r03',cat:'rire',lvl:'e',t:'dare',q:T("Imite l'autre en train de répondre au téléphone. Vocal obligatoire.","เลียนแบบอีกฝ่ายตอนรับโทรศัพท์ ต้องส่งเป็นข้อความเสียง")},
+{id:'r04',cat:'rire',lvl:'e',t:'guess',q:T("Mon pire défaut de couple, version comique…","ข้อเสียที่สุดของฉันเวลาเป็นแฟน แบบขำๆ…"),
+ o:[T("Je vole toute la couverture","แย่งผ้าห่มหมด"),T("Je dis « pas faim » puis je mange dans ton assiette","บอกว่าไม่หิว แล้วมากินจานเธอ"),T("Je chante faux, et fort","ร้องเพลงเพี้ยน แถมเสียงดัง"),T("Il me faut 45 minutes pour me préparer","แต่งตัว 45 นาที")]},
+{id:'r05',cat:'rire',lvl:'e',t:'talk',q:T("Invente le slogan publicitaire de notre couple.","คิดสโลแกนโฆษณาให้คู่ของเรา")},
+{id:'r06',cat:'rire',lvl:'e',t:'dare',q:T("Envoie le selfie le plus moche possible. Le premier qui rit a perdu.","ส่งเซลฟี่ที่น่าเกลียดที่สุดเท่าที่ทำได้ ใครหัวเราะก่อนแพ้")},
+/* Notre avenir */
+{id:'f01',cat:'avenir',lvl:'d',t:'talk',q:T("Où te vois-tu vivre avec moi ? Et qu'est-ce que tu serais prêt(e) à laisser derrière toi ?","เธอเห็นตัวเองอยู่กับฉันที่ไหน แล้วเธอพร้อมจะทิ้งอะไรไว้ข้างหลังบ้าง")},
+{id:'f02',cat:'avenir',lvl:'d',t:'guess',q:T("Les enfants, pour moi, c'est…","เรื่องลูก สำหรับฉันคือ…"),
+ o:[T("Oui, et assez vite","อยากมี และค่อนข้างเร็ว"),T("Oui, mais pas tout de suite","อยากมี แต่ยังไม่ใช่ตอนนี้"),T("Je ne suis pas encore sûr(e)","ยังไม่แน่ใจ"),T("Plutôt non","น่าจะไม่")],
+ talk:T("Qu'est-ce qui pèse le plus dans ta réponse ? On a le droit de ne pas être d'accord, l'important est de le savoir.","อะไรมีผลกับคำตอบของเธอมากที่สุด คิดไม่ตรงกันได้ แต่สำคัญที่เราต้องรู้")},
+{id:'f03',cat:'avenir',lvl:'d',t:'talk',q:T("L'argent dans un couple : compte commun, chacun le sien, ou un mélange ? Pourquoi ?","เรื่องเงินในคู่รัก: บัญชีร่วม แยกกัน หรือผสมกัน เพราะอะไร")},
+{id:'f04',cat:'avenir',lvl:'p',t:'guess',q:T("Dans 10 ans, notre dimanche idéal…","อีก 10 ปี วันอาทิตย์ในฝันของเรา…"),
+ o:[T("Grasse matinée puis marché","ตื่นสายแล้วไปตลาด"),T("Grande tablée avec la famille","กินข้าวโต๊ะใหญ่กับครอบครัว"),T("Bateau ou plage","ล่องเรือหรือไปทะเล"),T("Canapé, série, aucun projet","นอนดูซีรีส์บนโซฟา ไม่มีแผนอะไร")]},
+{id:'f05',cat:'avenir',lvl:'d',t:'talk',q:T("Quelle place veux-tu que nos familles aient dans notre vie ? Et la tienne, comment me voit-elle ?","อยากให้ครอบครัวของเรามีบทบาทแค่ไหนในชีวิตเรา แล้วครอบครัวเธอมองฉันยังไง")},
+{id:'f06',cat:'avenir',lvl:'p',t:'talk',q:T("Quel rêve as-tu mis de côté, que tu aimerais réaliser avec moi ?","มีความฝันอะไรที่เธอเก็บไว้ และอยากทำให้เป็นจริงกับฉัน")},
+{id:'f07',cat:'avenir',lvl:'d',t:'talk',q:T("Honnêtement, combien de temps peut-on tenir à distance ? Que doit-il se passer pour qu'on vive enfin ensemble ?","พูดตรงๆ เราอยู่ห่างกันได้อีกนานแค่ไหน ต้องเกิดอะไรขึ้นเราถึงจะได้อยู่ด้วยกันจริงๆ")},
+{id:'f08',cat:'avenir',lvl:'p',t:'guess',q:T("Notre maison idéale serait…","บ้านในฝันของเราคือ…"),
+ o:[T("Près de la mer","ใกล้ทะเล"),T("En ville, tout à pied","ในเมือง เดินไปไหนก็ได้"),T("À la campagne, avec un jardin","ต่างจังหวัด มีสวน"),T("N'importe où, tant qu'on est ensemble","ที่ไหนก็ได้ ขอแค่อยู่ด้วยกัน")]},
+/* Histoire & valeurs */
+{id:'v01',cat:'vie',lvl:'d',t:'talk',q:T("Quelle relation passée t'a le plus appris sur ce que tu veux, et sur ce que tu ne veux plus ?","ความสัมพันธ์ในอดีตครั้งไหนสอนเธอมากที่สุด ว่าอยากได้อะไร และไม่เอาอะไรอีกแล้ว")},
+{id:'v02',cat:'vie',lvl:'d',t:'talk',q:T("Quelle a été la période la plus dure de ta vie, et qui t'a aidé(e) à la traverser ?","ช่วงที่ยากที่สุดในชีวิตเธอคือตอนไหน และใครช่วยให้ผ่านมาได้")},
+{id:'v03',cat:'vie',lvl:'p',t:'guess',q:T("Ce qui compte le plus pour moi dans la vie…","สิ่งที่สำคัญที่สุดในชีวิตฉันคือ…"),
+ o:[T("La famille","ครอบครัว"),T("La liberté","อิสรภาพ"),T("La sécurité","ความมั่นคง"),T("L'amour","ความรัก")]},
+{id:'v04',cat:'vie',lvl:'d',t:'talk',q:T("Qu'est-ce que tu n'aimes pas chez toi, et que tu voudrais que je comprenne plutôt que juger ?","มีอะไรในตัวเองที่เธอไม่ชอบ และอยากให้ฉันเข้าใจมากกว่าตัดสิน")},
+{id:'v05',cat:'vie',lvl:'p',t:'talk',q:T("À 36 ans, de quoi es-tu le plus fier ou la plus fière ?","อายุ 36 แล้ว เธอภูมิใจเรื่องไหนมากที่สุด")},
+{id:'v06',cat:'vie',lvl:'d',t:'guess',q:T("Quand on se dispute, j'ai tendance à…","เวลาทะเลาะกัน ฉันมักจะ…"),
+ o:[T("Me fermer et me taire","เงียบและปิดตัวเอง"),T("Parler trop vite","พูดเร็วเกินไป"),T("Vouloir régler ça tout de suite","อยากเคลียร์ให้จบทันที"),T("Avoir besoin de temps seul(e)","ต้องการเวลาอยู่คนเดียว")],
+ talk:T("Qu'est-ce que l'autre peut faire pour que ça se passe mieux la prochaine fois ?","ครั้งหน้าอีกฝ่ายทำอะไรได้บ้างเพื่อให้ดีขึ้น")},
+{id:'v07',cat:'vie',lvl:'d',t:'talk',q:T("Qu'as-tu peur que je découvre sur toi quand on vivra ensemble ?","เธอกลัวว่าฉันจะเจออะไรในตัวเธอ ตอนที่เราได้อยู่ด้วยกัน")},
+{id:'v08',cat:'vie',lvl:'d',t:'talk',q:T("Tes croyances et tes valeurs : qu'est-ce qui est non négociable pour toi ?","ความเชื่อและค่านิยมของเธอ: อะไรที่ต่อรองไม่ได้เลย")},
+/* Tendresse & désir */
+{id:'i01',cat:'intime',lvl:'p',t:'guess',q:T("Le moment où je me sens le plus proche de toi…","ช่วงที่ฉันรู้สึกใกล้ชิดเธอที่สุด…"),
+ o:[T("Quand on s'endort au téléphone","ตอนเผลอหลับขณะคุยโทรศัพท์"),T("Quand tu me regardes sans rien dire","ตอนเธอมองฉันโดยไม่พูดอะไร"),T("Après un fou rire ensemble","หลังจากหัวเราะด้วยกัน"),T("Dans tes bras","ในอ้อมกอดของเธอ")]},
+{id:'i02',cat:'intime',lvl:'p',t:'talk',q:T("Quelle partie de moi te manque le plus physiquement ? Sois précis(e).","ส่วนไหนของฉันที่เธอคิดถึงที่สุด บอกให้ชัดๆ")},
+{id:'i03',cat:'intime',lvl:'d',t:'talk',q:T("Raconte le moment où tu as eu le plus envie de moi.","เล่าตอนที่เธออยากได้ฉันมากที่สุด")},
+{id:'i04',cat:'intime',lvl:'d',t:'guess',q:T("Ce qui m'attire le plus chez toi…","สิ่งที่ดึงดูดฉันที่สุดในตัวเธอ…"),
+ o:[T("Ta voix","เสียงของเธอ"),T("Ton regard","สายตาของเธอ"),T("Ta confiance en toi","ความมั่นใจของเธอ"),T("Ton odeur","กลิ่นของเธอ")]},
+{id:'i05',cat:'intime',lvl:'d',t:'talk',q:T("Y a-t-il un désir ou un fantasme que tu n'as jamais osé me dire ? Une phrase suffit.","มีความปรารถนาหรือจินตนาการที่เธอไม่เคยกล้าบอกฉันไหม ประโยคเดียวก็พอ")},
+{id:'i06',cat:'intime',lvl:'d',t:'dare',q:T("Envoie un vocal de 30 secondes, à voix basse : ce que tu ferais si on était seuls ce soir.","ส่งข้อความเสียง 30 วินาที เสียงเบาๆ: เธอจะทำอะไรถ้าคืนนี้เราอยู่กันสองคน")},
+{id:'i07',cat:'intime',lvl:'d',t:'talk',q:T("De quoi as-tu besoin pour te sentir en confiance et à l'aise dans l'intimité avec moi ?","เธอต้องการอะไรเพื่อรู้สึกไว้ใจและสบายใจ เวลาใกล้ชิดกับฉัน")},
+{id:'i08',cat:'intime',lvl:'p',t:'guess',q:T("La première nuit des retrouvailles, je veux…","คืนแรกที่ได้เจอกัน ฉันอยาก…"),
+ o:[T("Beaucoup de tendresse, lentement","อ่อนโยน ช้าๆ"),T("Ne pas dormir du tout","ไม่ต้องนอนเลย"),T("Un bon dîner d'abord","กินมื้อค่ำดีๆ ก่อน"),T("Juste dormir collés","แค่นอนกอดกัน")]},
+{id:'i09',cat:'intime',lvl:'p',t:'talk',q:T("Quel geste tendre aimerais-tu recevoir plus souvent ?","ท่าทางอ่อนโยนแบบไหนที่เธออยากได้บ่อยขึ้น")},
+{id:'i10',cat:'intime',lvl:'d',t:'talk',q:T("À distance, comment garder le désir vivant entre nous ? Une idée chacun.","อยู่ไกลกันแบบนี้ เราจะรักษาความปรารถนาต่อกันได้ยังไง คนละหนึ่งไอเดีย")}
+);
+/* Cartes supplémentaires : [type, niveau, fr, th, options, extra{s,f,k,a}] */
+function addRows(cat,prefix,start,rows){rows.forEach((r,i)=>{const[t,lvl,fr,th,o,x]=r;const c={id:prefix+String(start+i).padStart(2,'0'),lvl,t,q:T(fr,th)};if(cat)c.cat=cat;if(o)c.o=o.map(p=>T(p[0],p[1]));if(x){if(x.f)c.fact=T(x.f[0],x.f[1]);if(x.k)c.talk=T(x.k[0],x.k[1]);if(x.a!=null)c.a=x.a;if(x.s)c.s=x.s}CARDS.push(c)})}
+
+addRows(null,'p',37,[
+['guess','e',"Mon emoji le plus utilisé, c'est…","อีโมจิที่ฉันใช้บ่อยที่สุดคือ…",[["😂","😂"],["❤️","❤️"],["🥺","🥺"],["🙏","🙏"]],{s:1}],
+['talk','e',"Quelle chanson te fait penser à nous ? Envoie-la.","เพลงไหนที่ทำให้นึกถึงเรา ส่งมาเลย",0,{s:1}],
+['guess','e',"Ma première impression de toi, c'était…","ความประทับใจแรกที่ฉันมีต่อเธอคือ…",[["Trop mignon(ne)","น่ารักมาก"],["Un peu mystérieux(se)","ดูลึกลับนิดๆ"],["Très drôle","ตลกมาก"],["Je n'ai rien remarqué au début","ตอนแรกไม่ได้สังเกตเลย"]],{s:1,k:["Racontez chacun votre vraie première impression.","ต่างคนต่างเล่าความประทับใจแรกจริงๆ"]}],
+['dare','e',"Envoie une photo de ta vue, là, maintenant, sans rien ranger.","ส่งรูปวิวตรงหน้าเธอตอนนี้เลย ห้ามเก็บของก่อน",0,{s:1}],
+['talk','p',"Qu'est-ce que je fais qui te fait sourire, même quand je ne m'en rends pas compte ?","ฉันทำอะไรที่ทำให้เธอยิ้ม ทั้งที่ฉันไม่รู้ตัว",0,{s:2}],
+['guess','p',"Après une longue journée, je préfère…","หลังจากวันที่เหนื่อยมาก ฉันชอบ…",[["Un appel vidéo","วิดีโอคอล"],["Des messages tranquilles","ส่งข้อความเบาๆ"],["Un vocal","ข้อความเสียง"],["Le silence, puis te parler demain","เงียบไปก่อน พรุ่งนี้ค่อยคุย"]],{s:2}],
+['dare','e',"Apprends à l'autre une phrase utile dans ta langue, en vocal. L'autre doit la répéter.","สอนอีกฝ่ายพูดประโยคที่มีประโยชน์ในภาษาของเธอ ผ่านข้อความเสียง แล้วอีกฝ่ายต้องพูดตาม",0,{s:2}],
+['talk','p',"Quand as-tu compris que tu tenais vraiment à moi ?","เธอรู้ตัวตอนไหนว่ารักฉันจริงๆ",0,{s:3}],
+['guess','p',"Le moment de la journée où tu me manques le plus…","ช่วงไหนของวันที่ฉันคิดถึงเธอมากที่สุด…",[["Au réveil","ตอนตื่นนอน"],["Pendant les repas","ตอนกินข้าว"],["Le soir","ตอนเย็น"],["Au moment de dormir","ตอนจะนอน"]],{s:3}],
+['talk','p',"Qu'est-ce que la distance t'a appris sur toi ?","การอยู่ห่างกันสอนอะไรเธอเกี่ยวกับตัวเองบ้าง",0,{s:3}],
+['talk','d',"Y a-t-il quelque chose que j'ai dit ou fait qui t'a blessé(e), et dont tu n'as jamais parlé ?","มีอะไรที่ฉันพูดหรือทำแล้วทำให้เธอเสียใจ แต่เธอไม่เคยบอกไหม",0,{s:4,k:["Celui qui écoute dit seulement merci, sans se justifier.","คนฟังพูดแค่ขอบคุณ ไม่ต้องแก้ตัว"]}],
+['guess','d',"Ce qui me rassure le plus quand je doute de nous…","สิ่งที่ทำให้ฉันสบายใจที่สุดเวลาไม่มั่นใจในเรา…",[["Que tu me dises que tu m'aimes","เธอบอกว่ารักฉัน"],["Qu'on fasse des projets concrets","เราวางแผนอะไรที่จับต้องได้"],["Que tu sois disponible","เธอมีเวลาให้ฉัน"],["Que tu me fasses rire","เธอทำให้ฉันหัวเราะ"]],{s:4}],
+['talk','d',"Qu'aimerais-tu que je fasse plus souvent ? Et qu'aimerais-tu que j'arrête ?","อยากให้ฉันทำอะไรบ่อยขึ้น และอยากให้หยุดทำอะไร",0,{s:5}],
+['talk','d',"Si tu devais résumer notre histoire en trois mots, lesquels ? Explique chacun.","ถ้าสรุปเรื่องของเราเป็นสามคำ จะเป็นคำอะไร อธิบายทีละคำ",0,{s:6}]
+]);
+
+addRows('rire','r',7,[
+['guess','e',"Dans un film d'horreur, je serais celui ou celle qui…","ในหนังผี ฉันจะเป็นคนที่…",[["Meurt en premier","ตายคนแรก"],["Dit « je vais voir ce bruit »","พูดว่า 'เดี๋ยวไปดูเสียงนั้นหน่อย'"],["Survit en se cachant","รอดเพราะแอบซ่อน"],["Fait rire le monstre","ทำให้ผีหัวเราะ"]]],
+['talk','e',"Quel est le pire cadeau que tu aies jamais reçu ?","ของขวัญที่แย่ที่สุดที่เคยได้รับคืออะไร"],
+['dare','e',"Imite un animal en vocal. L'autre doit deviner lequel.","เลียนเสียงสัตว์ส่งเป็นข้อความเสียง ให้อีกฝ่ายทายว่าตัวอะไร"],
+['guess','e',"Si j'étais un animal, je serais…","ถ้าฉันเป็นสัตว์ ฉันจะเป็น…",[["Un chat qui dort tout le temps","แมวขี้เซา"],["Un chien beaucoup trop content","หมาที่ดีใจตลอดเวลา"],["Un paresseux","สลอธ"],["Un perroquet bavard","นกแก้วช่างพูด"]]],
+['talk','e',"Ton talent le plus inutile ? Prouve-le.","พรสวรรค์ที่ไร้ประโยชน์ที่สุดของเธอคืออะไร พิสูจน์มาเลย"],
+['guess','e',"Ce que je pourrais manger tous les jours…","อาหารที่ฉันกินได้ทุกวัน…",[["Du riz","ข้าว"],["Des frites","เฟรนช์ฟรายส์"],["Des nouilles","ก๋วยเตี๋ยว"],["Du chocolat","ช็อกโกแลต"]]],
+['dare','e',"Écris un poème de 4 lignes sur mon nez. Il doit rimer (un peu).","แต่งกลอน 4 บรรทัดเกี่ยวกับจมูกของฉัน ต้องคล้องจอง (นิดหน่อย)"],
+['talk','e',"Si on gagnait au loto demain, quelle serait ta première bêtise ?","ถ้าพรุ่งนี้เราถูกหวย เธอจะทำเรื่องบ้าๆ อะไรเป็นอย่างแรก"],
+['guess','e',"Ma chanson de karaoké de secours…","เพลงคาราโอเกะประจำตัวของฉัน…",[["Une chanson d'amour qui fait pleurer","เพลงรักเศร้าๆ"],["Un tube des années 2000","เพลงฮิตยุค 2000"],["Une chanson pour enfants","เพลงเด็ก"],["Je refuse de chanter","ไม่ร้องเด็ดขาด"]]],
+['talk','e',"Décris-moi en 3 emojis, puis explique.","อธิบายฉันด้วยอีโมจิ 3 ตัว แล้วบอกเหตุผล"],
+['dare','e',"Raconte ta journée en vocal, comme un commentateur sportif surexcité.","เล่าวันของเธอเป็นข้อความเสียง เหมือนนักพากย์กีฬาที่ตื่นเต้นสุดๆ"],
+['guess','e',"En cas d'invasion de zombies, mon arme serait…","ถ้าซอมบี้บุก อาวุธของฉันคือ…",[["Une poêle","กระทะ"],["Mon charme","เสน่ห์ของฉัน"],["Une tong","รองเท้าแตะ"],["Je cours. Très vite.","วิ่ง เร็วมาก"]]],
+['talk','e',"Quelle phrase dis-tu tout le temps sans t'en rendre compte ?","ประโยคไหนที่เธอพูดบ่อยโดยไม่รู้ตัว"],
+['guess','e',"Le pire chez moi au réveil…","สิ่งที่แย่ที่สุดของฉันตอนตื่นนอน…",[["Mes cheveux","ทรงผม"],["Mon haleine","กลิ่นปาก"],["Ma mauvaise humeur","อารมณ์บูด"],["Je parle trop","พูดมากเกินไป"]]],
+['dare','e',"Envoie la photo de toi la plus ancienne que tu as sur ton téléphone.","ส่งรูปที่เก่าที่สุดของเธอที่มีในโทรศัพท์"],
+['talk','e',"Si ta vie était une série, quel serait son titre ?","ถ้าชีวิตเธอเป็นซีรีส์ จะชื่อเรื่องว่าอะไร"],
+['guess','e',"Mon plus célèbre plat raté…","อาหารที่ฉันทำพังจนเป็นตำนาน…",[["Le riz brûlé","ข้าวไหม้"],["Les pâtes en un seul bloc","พาสต้าติดกันเป็นก้อน"],["L'œuf qui explose au micro-ondes","ไข่ระเบิดในไมโครเวฟ"],["Je ne rate jamais rien","ฉันไม่เคยทำพัง"]]],
+['talk','e',"Quel mot de ma langue te fait rire, et pourquoi ?","คำไหนในภาษาของฉันที่ทำให้เธอขำ เพราะอะไร"],
+['dare','e',"Chante « joyeux anniversaire » à ton objet préféré de la pièce, en vocal.","ร้องเพลงสุขสันต์วันเกิดให้สิ่งของที่ชอบที่สุดในห้อง ส่งเป็นข้อความเสียง"],
+['guess','e',"Pendant un road trip, je serais…","ถ้าไปเที่ยวด้วยรถ ฉันจะเป็น…",[["Le DJ","ดีเจ"],["Le GPS qui se trompe","GPS ที่พาหลง"],["Celui ou celle qui dort","คนที่หลับ"],["Le responsable des snacks","คนดูแลขนม"]]],
+['talk','e',"Quelle est la chose la plus bizarre que tu as cherchée sur internet cette semaine ?","สัปดาห์นี้เธอค้นหาอะไรแปลกที่สุดในอินเทอร์เน็ต"],
+['guess','e',"Mon pyjama idéal…","ชุดนอนในฝันของฉัน…",[["Un vieux t-shirt troué","เสื้อยืดเก่าขาดๆ"],["Un pyjama assorti","ชุดนอนเข้าชุด"],["Un paréo ou un sarong","ผ้าปาเรโอหรือผ้าถุง"],["Rien de spécial","ไม่มีอะไรพิเศษ"]]],
+['dare','e',"Fais une pub de 20 secondes pour te vendre comme petit(e) ami(e). En vocal ou vidéo.","ทำโฆษณา 20 วินาที ขายตัวเองในฐานะแฟน ส่งเป็นข้อความเสียงหรือวิดีโอ"],
+['talk','e',"Ton pire rendez-vous amoureux avant moi ? Les détails, s'il te plaît.","เดตที่แย่ที่สุดก่อนเจอฉัน? ขอรายละเอียดด้วย"],
+['guess','e',"Mon nom de super-héros serait…","ชื่อซูเปอร์ฮีโร่ของฉันคือ…",[["Capitaine Sieste","กัปตันงีบ"],["Super Goûter","ซูเปอร์ขนม"],["L'Éternel Retard","มนุษย์มาสาย"],["Super Câlin","ซูเปอร์กอด"]]],
+['talk','e',"Qu'est-ce qui te fait rire alors que ça ne devrait pas ?","อะไรที่ทำให้เธอขำ ทั้งที่ไม่ควรขำ"],
+['dare','e',"Envoie une photo de l'intérieur de ton frigo. Sans le ranger.","ส่งรูปข้างในตู้เย็นของเธอ ห้ามจัดก่อน"],
+['guess','e',"Je suis du genre à…","ฉันเป็นคนประเภทที่…",[["Pleurer devant les pubs","ร้องไห้ตอนดูโฆษณา"],["Rire nerveusement au mauvais moment","หัวเราะเพราะประหม่าผิดจังหวะ"],["Parler aux animaux","คุยกับสัตว์"],["Parler tout(e) seul(e)","พูดคนเดียว"]]],
+['talk','e',"Si tu pouvais échanger ta vie avec quelqu'un pendant un jour, ce serait qui ?","ถ้าสลับชีวิตกับใครได้หนึ่งวัน จะเลือกใคร"],
+['guess','e',"Invisible pendant une journée, je…","ถ้าล่องหนได้หนึ่งวัน ฉันจะ…",[["Mangerais dans les cuisines des restos","แอบกินในครัวร้านอาหาร"],["Viendrais te surprendre chez toi","ไปเซอร์ไพรส์เธอที่บ้าน"],["Dormirais dans un hôtel 5 étoiles","นอนโรงแรม 5 ดาว"],["Espionnerais mes amis","แอบดูเพื่อนๆ"]]],
+['dare','e',"Dessine notre futur chien ou chat, et donne-lui un nom ridicule.","วาดหมาหรือแมวในอนาคตของเรา แล้วตั้งชื่อตลกๆ ให้"],
+['talk','e',"La pire mode que tu as suivie dans ta vie ?","แฟชั่นที่แย่ที่สุดที่เธอเคยตาม"],
+['guess','e',"Combien de réveils je mets le matin ?","ตอนเช้าฉันตั้งนาฬิกาปลุกกี่อัน",[["Un seul, je suis un robot","อันเดียว ฉันเป็นหุ่นยนต์"],["Deux ou trois","สองสามอัน"],["Cinq ou plus","ห้าอันขึ้นไป"],["Aucun, je me réveille quand je veux","ไม่ตั้งเลย ตื่นตอนไหนก็ได้"]]],
+['talk','e',"Raconte la fois où tu as le plus rigolé de ta vie.","เล่าครั้งที่เธอหัวเราะหนักที่สุดในชีวิต"],
+['dare','e',"Envoie un vocal où tu dis bonne nuit avec la voix d'un méchant de dessin animé.","ส่งข้อความเสียงบอกฝันดี ด้วยเสียงตัวร้ายในการ์ตูน"],
+['guess','e',"Mon côté le plus enfant…","ด้านที่เป็นเด็กที่สุดของฉัน…",[["Les dessins animés","การ์ตูน"],["Les bonbons","ลูกอม"],["Les peluches","ตุ๊กตา"],["Les jeux vidéo","เกม"]]],
+['talk','e',"Invente le nom et la recette de notre cocktail de couple.","ตั้งชื่อและสูตรค็อกเทลประจำคู่ของเรา"],
+['guess','e',"Perdu(e) sur une île déserte, j'emporterais…","ถ้าติดเกาะร้าง ฉันจะเอา…ไปด้วย",[["Mon téléphone (sans réseau)","มือถือ (ไม่มีสัญญาณ)"],["Un couteau","มีด"],["Du piment","พริก"],["Toi, évidemment","เธอไง แน่นอน"]]],
+['dare','e',"Fais 10 pompes en vocal, en comptant dans la langue de l'autre.","วิดพื้น 10 ครั้ง นับเป็นภาษาของอีกฝ่าย ส่งเป็นข้อความเสียง"],
+['talk','e',"Quel est ton plaisir coupable que personne ne connaît ?","ความสุขแอบๆ ที่ไม่มีใครรู้ของเธอคืออะไร"],
+['guess','e',"Face à un cafard, je…","เวลาเจอแมลงสาบ ฉัน…",[["Hurle","กรี๊ด"],["Quitte la pièce","หนีออกจากห้อง"],["Le tue calmement","ฆ่ามันอย่างใจเย็น"],["Lui donne un prénom","ตั้งชื่อให้มัน"]]],
+['talk','e',"Si tu étais un personnage de dessin animé, lequel serais-tu ?","ถ้าเธอเป็นตัวการ์ตูน จะเป็นตัวไหน"],
+['dare','e',"Prends un selfie en imitant ma tête quand je suis concentré(e).","ถ่ายเซลฟี่เลียนแบบหน้าฉันตอนตั้งใจทำอะไร"],
+['guess','e',"Le petit mensonge que je dis le plus…","คำโกหกเล็กๆ ที่ฉันพูดบ่อยที่สุด…",[["« J'arrive dans 5 minutes »","'อีก 5 นาทีถึง'"],["« Je ne suis pas fâché(e) »","'ไม่ได้โกรธ'"],["« Je n'ai pas faim »","'ไม่หิว'"],["« Je dors bientôt »","'เดี๋ยวนอนแล้ว'"]]]
+]);
+
+addRows('avenir','f',9,[
+['talk','p',"Où aimerais-tu partir pour notre premier grand voyage à deux ?","อยากไปเที่ยวที่ไหนเป็นทริปใหญ่ครั้งแรกของเรา"],
+['guess','p',"Dans notre future cuisine, c'est moi qui…","ในครัวของเราในอนาคต ฉันจะเป็นคนที่…",[["Cuisine tous les jours","ทำอาหารทุกวัน"],["Fais la vaisselle","ล้างจาน"],["Goûte et critique","ชิมและวิจารณ์"],["Commande à livrer","สั่งเดลิเวอรี"]]],
+['talk','d',"Quelle langue parlerons-nous à la maison ? Et avec nos enfants, si on en a ?","ที่บ้านเราจะพูดภาษาอะไร แล้วกับลูก ถ้าเรามีลูก"],
+['talk','d',"Comment imagines-tu le partage des tâches à la maison ?","เธอนึกภาพการแบ่งงานบ้านไว้ยังไง"],
+['guess','p',"Un animal à la maison, pour moi…","เรื่องเลี้ยงสัตว์ในบ้าน สำหรับฉัน…",[["Un chien, obligatoire","หมา ต้องมี"],["Un chat","แมว"],["Pas d'animal","ไม่เลี้ยงสัตว์"],["Des poissons, c'est assez","ปลาก็พอ"]]],
+['talk','d',"Quel métier ou quel projet aimerais-tu mener dans 5 ans ?","อีก 5 ปีเธออยากทำงานหรือโปรเจกต์อะไร"],
+['talk','d',"Si l'un de nous change de pays, comment s'assurer qu'il ou elle ne se sente pas seul(e) ?","ถ้าคนหนึ่งต้องย้ายประเทศ เราจะทำยังไงให้เขาไม่รู้สึกโดดเดี่ยว"],
+['guess','d',"Le mariage, pour moi, c'est…","การแต่งงาน สำหรับฉันคือ…",[["Important, j'en rêve","สำคัญ ฉันฝันถึงมัน"],["Un joli plus, pas obligatoire","ดีถ้ามี แต่ไม่จำเป็น"],["Surtout important pour la famille","สำคัญเพราะครอบครัว"],["Pas pour moi","ไม่ใช่สำหรับฉัน"]],{k:["Et quel genre de cérémonie : thaïe, tahitienne, française, un mélange ?","แล้วอยากได้พิธีแบบไหน ไทย ตาฮีตี ฝรั่งเศส หรือผสมกัน"]}],
+['talk','p',"Décris notre fête idéale : mariage, anniversaire ou simple soirée.","เล่างานปาร์ตี้ในฝันของเรา จะเป็นงานแต่ง วันเกิด หรือแค่ปาร์ตี้ก็ได้"],
+['talk','d',"Qu'est-ce qui te fait peur dans le fait de vieillir ?","อะไรทำให้เธอกลัวเรื่องการแก่ตัว"],
+['guess','p',"À 60 ans, je nous vois…","ตอนอายุ 60 ฉันเห็นเรา…",[["Sur un bateau","อยู่บนเรือ"],["Avec des petits-enfants","อยู่กับหลานๆ"],["Avec un petit restaurant","มีร้านอาหารเล็กๆ"],["Toujours en train de se taquiner","ยังแกล้งกันเหมือนเดิม"]]],
+['talk','d',"Comment veux-tu qu'on gère nos disputes quand on vivra ensemble ? Une règle chacun.","ตอนอยู่ด้วยกัน อยากให้เราจัดการเวลาทะเลาะยังไง คนละหนึ่งกฎ"],
+['talk','p',"Quelle tradition aimerais-tu qu'on crée, rien qu'à nous ?","อยากสร้างธรรมเนียมอะไรที่เป็นของเราสองคน"],
+['guess','d',"Avec notre argent, ma priorité…","เรื่องเงินของเรา สิ่งที่ฉันให้ความสำคัญที่สุด…",[["Épargner pour une maison","เก็บเงินซื้อบ้าน"],["Voyager","เที่ยว"],["Aider nos familles","ช่วยครอบครัว"],["Profiter du présent","ใช้ชีวิตตอนนี้"]]],
+['talk','d',"Aider financièrement nos familles : jusqu'où, pour toi ?","การช่วยเหลือครอบครัวเรื่องเงิน สำหรับเธอแค่ไหนถึงจะพอดี",0,{f:["En Thaïlande, beaucoup d'adultes soutiennent leurs parents financièrement : c'est une forme de gratitude, la « katanyu ».","ในประเทศไทย ลูกที่โตแล้วจำนวนมากช่วยพ่อแม่เรื่องเงิน ถือเป็นความกตัญญู ส่วนในฝรั่งเศสเรื่องนี้พบน้อยกว่า"]}],
+['talk','p',"Si on avait une année sabbatique ensemble, on ferait quoi ?","ถ้าเราได้หยุดพักหนึ่งปีด้วยกัน จะทำอะไร"],
+['guess','p',"Notre prochain appel vidéo idéal…","วิดีโอคอลครั้งหน้าในฝันของฉัน…",[["Cuisiner la même recette","ทำอาหารเมนูเดียวกัน"],["Regarder un film en même temps","ดูหนังพร้อมกัน"],["Jouer à un jeu","เล่นเกม"],["S'endormir en appel","หลับไปด้วยกันในสาย"]]],
+['talk','d',"Qu'est-ce qui doit être en place pour que tu te sentes prêt(e) à vivre avec moi ?","ต้องมีอะไรพร้อมบ้าง เธอถึงจะพร้อมอยู่กับฉัน"],
+['talk','p',"Quel est le premier objet que tu achèterais pour notre maison ?","ของชิ้นแรกที่เธอจะซื้อเข้าบ้านเราคืออะไร"],
+['guess','d',"Si on a des enfants, l'éducation que je veux…","ถ้าเรามีลูก การเลี้ยงดูที่ฉันอยากได้…",[["Stricte mais juste","เข้มงวดแต่ยุติธรรม"],["Libre et créative","อิสระและสร้างสรรค์"],["Comme celle de mes parents","เหมือนที่พ่อแม่เลี้ยงฉัน"],["Tout le contraire de mes parents","ตรงข้ามกับพ่อแม่ฉัน"]]],
+['talk','d',"Qu'as-tu envie de transmettre de ta culture à la génération suivante ?","อยากส่งต่ออะไรจากวัฒนธรรมของเธอให้คนรุ่นต่อไป"],
+['talk','p',"Quel est ton plan pour notre premier week-end après les retrouvailles ?","แผนสุดสัปดาห์แรกหลังจากเจอกันของเธอคืออะไร"],
+['guess','p',"Notre rythme de vie idéal…","จังหวะชีวิตในฝันของเรา…",[["Lève-tôt et sportifs","ตื่นเช้า ออกกำลังกาย"],["Couche-tard et cinéma","นอนดึก ดูหนัง"],["Tranquilles à la maison","สบายๆ อยู่บ้าน"],["Toujours dehors avec des amis","ออกไปข้างนอกกับเพื่อนตลอด"]]],
+['talk','d',"Les grandes décisions : on les prend toujours ensemble, ou chacun a ses domaines ?","เรื่องใหญ่ๆ เราจะตัดสินใจด้วยกันเสมอ หรือแบ่งกันคนละเรื่อง"],
+['talk','p',"À part le tien, quel pays aimerais-tu me faire découvrir en premier ?","นอกจากประเทศของเธอ อยากพาฉันไปประเทศไหนเป็นที่แรก"],
+['guess','d',"Le plus gros sacrifice que je suis prêt(e) à faire pour nous…","สิ่งที่ฉันพร้อมเสียสละมากที่สุดเพื่อเรา…",[["Changer de pays","ย้ายประเทศ"],["Changer de travail","เปลี่ยนงาน"],["Apprendre une nouvelle langue","เรียนภาษาใหม่"],["Vivre loin de mes amis","อยู่ไกลเพื่อน"]]],
+['talk','d',"Qu'est-ce qui pourrait nous séparer, à ton avis ? Et comment l'éviter ?","เธอคิดว่าอะไรที่อาจทำให้เราเลิกกัน แล้วเราจะป้องกันยังไง"],
+['talk','p',"Fais la liste de 5 choses à faire ensemble avant nos 40 ans.","เขียน 5 อย่างที่เราจะทำด้วยกันก่อนอายุ 40"],
+['guess','p',"Mon futur moyen de transport idéal…","ยานพาหนะในฝันของฉันในอนาคต…",[["Un scooter, ça suffit","สกู๊ตเตอร์ก็พอ"],["Un pick-up","รถกระบะ"],["Une petite voiture électrique","รถไฟฟ้าคันเล็ก"],["Pas de voiture, un bateau","ไม่เอารถ เอาเรือ"]]],
+['talk','d',"Comment imagines-tu nos vieux jours : où, avec qui, à faire quoi ?","ตอนแก่เธอนึกภาพเราไว้ยังไง อยู่ที่ไหน กับใคร ทำอะไร"],
+['talk','p',"Quel nouveau loisir aimerais-tu qu'on commence ensemble ?","อยากเริ่มงานอดิเรกใหม่อะไรด้วยกัน"],
+['talk','d',"Si on vit dans mon pays, qu'est-ce qui sera le plus dur pour toi, et comment je peux t'aider ?","ถ้าเราอยู่ประเทศของฉัน อะไรจะยากที่สุดสำหรับเธอ และฉันจะช่วยได้ยังไง"],
+['talk','d',"Quelle est ta plus grande peur pour notre avenir ? Et ton plus grand espoir ?","เธอกลัวอะไรที่สุดเกี่ยวกับอนาคตของเรา และหวังอะไรมากที่สุด"],
+['talk','p',"On ouvre une petite entreprise ensemble : laquelle, et qui fait quoi ?","ถ้าเราเปิดธุรกิจเล็กๆ ด้วยกัน จะทำอะไร และใครทำส่วนไหน"],
+['guess','p',"En vacances, je préfère…","เวลาไปเที่ยว ฉันชอบ…",[["La plage","ทะเล"],["La montagne","ภูเขา"],["Les grandes villes","เมืองใหญ่"],["Rester chez la famille","อยู่กับครอบครัว"]]],
+['talk','d',"Comment chacun garde sa liberté une fois qu'on vit ensemble ?","พอได้อยู่ด้วยกันแล้ว เราจะรักษาอิสระของแต่ละคนยังไง"],
+['talk','p',"Écris la première phrase de la lettre que tu m'écrirais dans 10 ans.","เขียนประโยคแรกของจดหมายที่เธอจะเขียนถึงฉันในอีก 10 ปี"],
+['guess','p',"Notre première grosse dépense à deux devrait être…","การใช้เงินก้อนใหญ่ครั้งแรกของเราควรเป็น…",[["Un voyage","การเดินทาง"],["Un logement","บ้านหรือคอนโด"],["Des billets d'avion pour se voir plus souvent","ตั๋วเครื่องบินเพื่อเจอกันบ่อยขึ้น"],["Une grande fête","ปาร์ตี้ใหญ่"]]],
+['talk','d',"Qu'attends-tu de moi quand tu es malade ou très fatigué(e) ?","เวลาเธอป่วยหรือเหนื่อยมาก เธอคาดหวังอะไรจากฉัน"],
+['talk','p',"Quel quartier ou quelle île serait parfait pour nous, et pourquoi ?","ย่านไหนหรือเกาะไหนที่เหมาะกับเรา เพราะอะไร"],
+['guess','p',"Ce que je voudrais apprendre avant qu'on vive ensemble…","สิ่งที่ฉันอยากเรียนรู้ก่อนเราได้อยู่ด้วยกัน…",[["Ta langue","ภาษาของเธอ"],["Cuisiner tes plats","ทำอาหารของเธอ"],["Conduire de l'autre côté de la route","ขับรถอีกฝั่งของถนน"],["La patience","ความอดทน"]],{f:["La Thaïlande roule à gauche ; la France et Tahiti roulent à droite.","ประเทศไทยขับรถชิดซ้าย ส่วนฝรั่งเศสและตาฮีตีขับชิดขวา"]}],
+['talk','d',"Fixons un vrai objectif à deux pour cette année. Lequel ?","มาตั้งเป้าหมายจริงๆ ของเราสองคนสำหรับปีนี้กัน เป้าหมายอะไรดี"]
+]);
+
+addRows('vie','v',9,[
+['talk','p',"Quelle personne t'a le plus influencé(e) dans ta vie ?","ใครมีอิทธิพลต่อชีวิตเธอมากที่สุด"],
+['guess','p',"Enfant, je rêvais de devenir…","ตอนเด็กๆ ฉันฝันอยากเป็น…",[["Médecin ou infirmier(e)","หมอหรือพยาบาล"],["Une star","ดารา"],["Pilote ou marin","นักบินหรือกะลาสี"],["Je n'en avais aucune idée","ไม่รู้เลย"]]],
+['talk','d',"Qu'est-ce que tes parents t'ont donné de plus précieux ? Et de plus difficile ?","พ่อแม่ให้อะไรที่มีค่าที่สุดกับเธอ และอะไรที่ยากที่สุด"],
+['talk','p',"Raconte une décision qui a changé ta vie.","เล่าการตัดสินใจที่เปลี่ยนชีวิตเธอ"],
+['guess','p',"Mon plus grand défaut, pour de vrai…","ข้อเสียที่สุดของฉันจริงๆ…",[["L'impatience","ใจร้อน"],["La jalousie","ขี้หึง"],["Je garde tout pour moi","เก็บทุกอย่างไว้คนเดียว"],["La paresse","ขี้เกียจ"]]],
+['talk','d',"Quel regret gardes-tu ? Qu'est-ce qu'il t'a appris ?","เธอเสียใจเรื่องอะไรบ้าง และมันสอนอะไรเธอ"],
+['talk','p',"Qu'est-ce qui te rend vraiment heureux ou heureuse au quotidien ?","อะไรทำให้เธอมีความสุขจริงๆ ในชีวิตประจำวัน"],
+['guess','d',"Quand je suis en colère, il vaut mieux…","เวลาฉันโกรธ ทางที่ดีคือ…",[["Me laisser tranquille","ปล่อยฉันไว้คนเดียว"],["Me prendre dans les bras","กอดฉัน"],["Me faire parler","ชวนฉันคุย"],["Me faire rire","ทำให้ฉันหัวเราะ"]]],
+['talk','d',"Qu'est-ce qui te met mal à l'aise, mais dont tu n'oses pas parler ?","อะไรทำให้เธออึดอัด แต่ไม่กล้าพูด"],
+['talk','p',"Quel est le meilleur conseil qu'on t'ait donné ?","คำแนะนำที่ดีที่สุดที่เคยได้รับคืออะไร"],
+['guess','p',"Ce que les gens ne savent pas sur moi…","สิ่งที่คนอื่นไม่รู้เกี่ยวกับฉัน…",[["Je suis plus timide qu'on croit","ขี้อายกว่าที่คิด"],["Je pleure facilement","ร้องไห้ง่าย"],["Je doute beaucoup","คิดมาก"],["J'ai une mémoire d'éléphant","ความจำดีมาก"]]],
+['talk','d',"Comment ta famille montrait-elle l'amour quand tu étais petit(e) ? Avec des mots, des gestes, de la nourriture ?","ตอนเด็กๆ ครอบครัวเธอแสดงความรักยังไง ด้วยคำพูด ท่าทาง หรืออาหาร"],
+['talk','p',"Quel âge de ta vie as-tu préféré, et pourquoi ?","ช่วงอายุไหนในชีวิตที่เธอชอบที่สุด เพราะอะไร"],
+['guess','d',"Ce qui me blesse le plus…","สิ่งที่ทำให้ฉันเจ็บที่สุด…",[["Être ignoré(e)","ถูกเมิน"],["Le mensonge","การโกหก"],["Être critiqué(e) devant les autres","ถูกติต่อหน้าคนอื่น"],["Qu'on oublie ce qui compte pour moi","ลืมสิ่งที่สำคัญกับฉัน"]]],
+['talk','d',"Quand t'es-tu senti(e) le plus seul(e) ?","เธอรู้สึกเหงาที่สุดตอนไหน"],
+['talk','p',"Qu'est-ce que ton métier dit de toi ?","งานของเธอบอกอะไรเกี่ยวกับตัวเธอ"],
+['guess','p',"Je me ressource surtout…","ฉันชาร์จพลังได้ดีที่สุดเวลา…",[["Seul(e) au calme","อยู่คนเดียวเงียบๆ"],["Avec des amis","อยู่กับเพื่อน"],["Dans la nature","อยู่ในธรรมชาติ"],["En faisant du sport","ออกกำลังกาย"]]],
+['talk','d',"Qu'as-tu dû pardonner dans ta vie ? Est-ce que c'est fait ?","เธอเคยต้องให้อภัยเรื่องอะไรในชีวิต ให้อภัยได้แล้วหรือยัง"],
+['talk','p',"Une chose que tu as apprise tout(e) seul(e) et dont tu es fier(e) ?","สิ่งที่เธอเรียนรู้ด้วยตัวเองแล้วภูมิใจ"],
+['guess','d',"Ce qui me fait le plus peur en amour…","สิ่งที่ฉันกลัวที่สุดในความรัก…",[["Être abandonné(e)","ถูกทิ้ง"],["Perdre ma liberté","เสียอิสระ"],["Être trompé(e)","ถูกนอกใจ"],["Ne pas être à la hauteur","ไม่ดีพอ"]]],
+['talk','d',"Que veut dire la fidélité pour toi, concrètement ?","ความซื่อสัตย์ในความรักหมายถึงอะไรสำหรับเธอ แบบจับต้องได้"],
+['talk','p',"Quel livre, film ou chanson a changé ta façon de voir le monde ?","หนังสือ หนัง หรือเพลงไหนที่เปลี่ยนมุมมองของเธอ"],
+['guess','p',"Mon rapport à l'argent…","ฉันกับเรื่องเงิน…",[["Je dépense facilement","ใช้เงินง่าย"],["J'économise tout","เก็บทุกบาท"],["Ça me stresse","ทำให้เครียด"],["Je n'y pense pas trop","ไม่ค่อยคิด"]]],
+['talk','d',"Y a-t-il une blessure de ton passé qui influence encore notre relation ?","มีบาดแผลในอดีตที่ยังส่งผลต่อความสัมพันธ์ของเราไหม"],
+['talk','p',"Qui est ton meilleur ami ou ta meilleure amie, et pourquoi lui fais-tu confiance ?","เพื่อนสนิทที่สุดของเธอคือใคร ทำไมถึงไว้ใจเขา"],
+['guess','d',"Pour me sentir respecté(e), j'ai besoin…","ฉันจะรู้สึกว่าได้รับความเคารพ เมื่อ…",[["Qu'on m'écoute jusqu'au bout","ฟังฉันจนจบ"],["Qu'on tienne ses promesses","รักษาสัญญา"],["Qu'on respecte ma famille","เคารพครอบครัวฉัน"],["Qu'on me laisse décider","ให้ฉันตัดสินใจเอง"]]],
+['talk','d',"Qu'est-ce qui te rend jaloux ou jalouse, et comment je peux t'aider ?","อะไรทำให้เธอหึง แล้วฉันช่วยอะไรได้บ้าง"],
+['talk','p',"Quel est ton souvenir le plus fort avec tes grands-parents ?","ความทรงจำที่ชัดที่สุดกับปู่ย่าตายายของเธอคืออะไร"],
+['guess','p',"Pour décider, je suis plutôt…","เวลาตัดสินใจ ฉันมัก…",[["Cœur","ใช้หัวใจ"],["Tête","ใช้เหตุผล"],["Instinct","ใช้สัญชาตญาณ"],["Ça dépend de l'humeur","แล้วแต่อารมณ์"]]],
+['talk','d',"Qu'est-ce que tu n'as jamais dit à tes parents ?","มีอะไรที่เธอไม่เคยบอกพ่อแม่"],
+['talk','p',"Qu'aimerais-tu qu'on dise de toi à tes 80 ans ?","ตอนอายุ 80 อยากให้คนพูดถึงเธอว่ายังไง"],
+['guess','d',"Quand on me fait un compliment, je…","เวลามีคนชม ฉัน…",[["Rougis et change de sujet","หน้าแดงแล้วเปลี่ยนเรื่อง"],["N'y crois pas","ไม่เชื่อ"],["Adore ça","ชอบมาก"],["Retourne le compliment","ชมกลับ"]]],
+['talk','d',"Dans quelle situation as-tu le plus besoin que je sois là, même à distance ?","สถานการณ์แบบไหนที่เธอต้องการให้ฉันอยู่ข้างๆ มากที่สุด แม้จะอยู่ไกล"],
+['talk','p',"Que ferais-tu si tu n'avais peur de rien ?","ถ้าไม่กลัวอะไรเลย เธอจะทำอะไร"],
+['guess','p',"La spiritualité dans ma vie…","ความเชื่อทางจิตวิญญาณในชีวิตฉัน…",[["Très présente","สำคัญมาก"],["Surtout des traditions","เป็นเรื่องประเพณีมากกว่า"],["Discrète et personnelle","เงียบๆ เป็นเรื่องส่วนตัว"],["Pas vraiment","ไม่ค่อยมี"]]],
+['talk','d',"Qu'est-ce qui t'a fait mûrir le plus vite ?","อะไรทำให้เธอโตเร็วที่สุด"],
+['talk','p',"Quelle habitude veux-tu changer chez toi cette année ?","นิสัยอะไรของตัวเองที่อยากเปลี่ยนในปีนี้"],
+['guess','d',"Quand je suis stressé(e), ça se voit parce que…","เวลาฉันเครียด สังเกตได้เพราะ…",[["Je deviens silencieux(se)","เงียบลง"],["Je m'énerve vite","หงุดหงิดง่าย"],["Je dors mal","นอนไม่หลับ"],["Je deviens hyperactif(ve)","อยู่ไม่สุข ทำนู่นทำนี่"]]],
+['talk','d',"Qu'as-tu besoin d'entendre plus souvent ?","เธออยากได้ยินคำไหนบ่อยขึ้น"],
+['talk','p',"Quelle est la chose la plus courageuse que tu aies faite ?","สิ่งที่กล้าหาญที่สุดที่เธอเคยทำคืออะไร"],
+['guess','p',"Ce qui me rend fier ou fière de toi…","สิ่งที่ทำให้ฉันภูมิใจในตัวเธอ…",[["Ton courage","ความกล้าของเธอ"],["Ta gentillesse","ความใจดีของเธอ"],["Ton travail","การทำงานของเธอ"],["Ta façon d'aimer ta famille","วิธีที่เธอรักครอบครัว"]]],
+['talk','d',"Si tu pouvais dire une chose à toi à 20 ans, ce serait quoi ?","ถ้าบอกอะไรตัวเองตอนอายุ 20 ได้หนึ่งอย่าง จะบอกว่าอะไร"]
+]);
+
+addRows('intime','i',11,[
+['talk','p',"Quel est ton souvenir le plus tendre de nous deux ?","ความทรงจำที่อ่อนโยนที่สุดของเราสองคนคืออะไร"],
+['guess','p',"Le baiser que je préfère…","จูบแบบที่ฉันชอบที่สุด…",[["Doux et lent","นุ่มนวลและช้าๆ"],["Sur le front","ที่หน้าผาก"],["Dans le cou","ที่คอ"],["Par surprise","แบบไม่ทันตั้งตัว"]]],
+['talk','d',"Qu'est-ce qui te donne envie de moi, même de loin ?","อะไรทำให้เธอปรารถนาฉัน แม้จะอยู่ไกล"],
+['dare','p',"Envoie une photo de toi que tu aimes bien, juste pour moi.","ส่งรูปของเธอที่เธอชอบ ส่งให้ฉันคนเดียว"],
+['guess','p',"Pour une soirée en amoureux, je préfère…","คืนสำหรับคู่รัก ฉันชอบ…",[["Un dîner aux chandelles","ดินเนอร์ใต้แสงเทียน"],["Massage et musique","นวดและเปิดเพลง"],["Un bain ou une douche à deux","อาบน้ำด้วยกัน"],["Danser dans le salon","เต้นรำในห้องนั่งเล่น"]]],
+['talk','d',"Qu'aimerais-tu essayer avec moi, sans aucune pression ?","มีอะไรที่อยากลองกับฉันไหม ไม่กดดันเลยนะ"],
+['talk','p',"Quelle tenue de moi préfères-tu ?","ชุดไหนของฉันที่เธอชอบที่สุด"],
+['guess','d',"Ce qui me met le plus en confiance…","สิ่งที่ทำให้ฉันไว้ใจและผ่อนคลายที่สุด…",[["Les mots doux","คำหวาน"],["Prendre notre temps","ค่อยเป็นค่อยไป"],["Rire ensemble avant","หัวเราะด้วยกันก่อน"],["Que tu me guides","ให้เธอเป็นคนนำ"]]],
+['talk','d',"Quel est ton endroit préféré pour être embrassé(e) ?","ชอบให้จูบตรงไหนที่สุด"],
+['dare','d',"Écris-moi un message que je ne dois lire que ce soir, au lit.","เขียนข้อความที่ฉันต้องอ่านคืนนี้บนเตียงเท่านั้น"],
+['talk','p',"Qu'est-ce qui te fait te sentir beau ou belle ?","อะไรทำให้เธอรู้สึกว่าตัวเองสวยหรือหล่อ"],
+['guess','p',"Le câlin que je préfère…","การกอดแบบที่ฉันชอบที่สุด…",[["Par derrière","กอดจากด้านหลัง"],["Long et serré","กอดแน่นๆ นานๆ"],["En cuillère pour dormir","นอนกอดแบบช้อน"],["Au réveil","ตอนตื่นนอน"]]],
+['talk','d',"Y a-t-il quelque chose que tu n'aimes pas et que tu n'as jamais osé me dire ?","มีอะไรที่เธอไม่ชอบ แต่ไม่เคยกล้าบอกฉันไหม"],
+['talk','p',"Décris l'odeur qui te fait penser à moi.","บอกกลิ่นที่ทำให้เธอนึกถึงฉัน"],
+['guess','d',"Mon moment préféré pour l'intimité…","ช่วงเวลาที่ฉันชอบสำหรับความใกล้ชิด…",[["Le matin","ตอนเช้า"],["L'après-midi","ตอนบ่าย"],["Tard le soir","ตอนดึก"],["N'importe quand","เมื่อไหร่ก็ได้"]]],
+['dare','p',"Envoie un vocal où tu me dis trois choses que tu aimes sur mon corps.","ส่งข้อความเสียงบอกสามอย่างที่เธอชอบในร่างกายของฉัน"],
+['talk','d',"Qu'est-ce qui te coupe l'envie ? On a le droit de le dire.","อะไรทำให้เธอหมดอารมณ์ พูดได้นะ"],
+['talk','p',"Si on avait une nuit entière dans un endroit de rêve, ce serait où ?","ถ้าเรามีคืนหนึ่งในที่ในฝัน จะเป็นที่ไหน"],
+['guess','p',"Je préfère que tu me séduises avec…","ฉันชอบให้เธอจีบด้วย…",[["Des mots","คำพูด"],["Un regard","สายตา"],["Des petits gestes","ท่าทางเล็กๆ"],["De l'humour","อารมณ์ขัน"]]],
+['talk','d',"Comment veux-tu que je te dise « pas ce soir » sans que tu te sentes rejeté(e) ?","อยากให้ฉันบอกว่า 'คืนนี้ไม่ไหว' ยังไง เธอถึงจะไม่รู้สึกว่าถูกปฏิเสธ"],
+['talk','p',"Quel compliment de moi t'a le plus touché(e) ?","คำชมไหนของฉันที่ทำให้เธอซึ้งที่สุด"],
+['dare','d',"Décris en trois messages le baiser de nos retrouvailles.","เล่าจูบแรกตอนเราได้เจอกันอีกครั้ง ในสามข้อความ"],
+['guess','d',"Ce que je trouve le plus sexy chez toi…","สิ่งที่ฉันว่าเซ็กซี่ที่สุดในตัวเธอ…",[["Ton sourire","รอยยิ้มของเธอ"],["Tes mains","มือของเธอ"],["Ta façon de parler","วิธีพูดของเธอ"],["Quand tu es sûr(e) de toi","ตอนเธอมั่นใจ"]]],
+['talk','p',"Quelle musique mettrais-tu pour notre soirée à deux ?","จะเปิดเพลงอะไรในคืนของเราสองคน"],
+['talk','d',"Est-ce que la distance change ta façon de ressentir le désir ? Comment ?","การอยู่ห่างกันเปลี่ยนความรู้สึกปรารถนาของเธอไหม ยังไง"],
+['guess','p',"Ma tendresse préférée…","ความอ่อนโยนแบบที่ฉันชอบที่สุด…",[["Les petits surnoms","ชื่อเล่นหวานๆ"],["Les caresses dans les cheveux","ลูบผม"],["Se tenir la main","จับมือ"],["Des bisous partout","หอมแก้มทุกที่"]]],
+['dare','p',"Envoie une photo de tes mains. Oui, juste tes mains.","ส่งรูปมือของเธอ ใช่ แค่มือ"],
+['talk','d',"Que ressens-tu juste après un moment intime avec moi ?","หลังจากช่วงเวลาใกล้ชิดกับฉัน เธอรู้สึกยังไง"],
+['talk','p',"Quel est le geste tendre le plus inattendu que je t'ai fait ?","ท่าทางอ่อนโยนที่ไม่คาดคิดที่สุดที่ฉันเคยทำให้เธอคืออะไร"],
+['guess','d',"Dans l'intimité, je suis plutôt…","เวลาใกล้ชิด ฉันมักจะ…",[["Timide au début","ขี้อายตอนแรก"],["Joueur ou joueuse","ขี้เล่น"],["Très tendre","อ่อนโยนมาก"],["Ça dépend de toi","แล้วแต่เธอ"]]],
+['talk','d',"Quelle a été ta plus belle nuit avec moi ? Raconte.","คืนที่ดีที่สุดกับฉันคือคืนไหน เล่าหน่อย"],
+['dare','p',"Envoie un vocal où tu chuchotes « bonne nuit » le plus doucement possible.","ส่งข้อความเสียงกระซิบ 'ฝันดี' ให้เบาที่สุดเท่าที่ทำได้"],
+['talk','p',"Qu'est-ce qui rend un moment romantique, pour toi ?","สำหรับเธอ อะไรทำให้ช่วงเวลาหนึ่งโรแมนติก"],
+['guess','p',"Mon cadeau sensuel idéal…","ของขวัญแบบโรแมนติกที่ฉันอยากได้…",[["Un parfum","น้ำหอม"],["De la jolie lingerie ou un beau pyjama","ชุดชั้นในหรือชุดนอนสวยๆ"],["Une huile de massage","น้ำมันนวด"],["Une lettre d'amour","จดหมายรัก"]]],
+['talk','d',"Y a-t-il un sujet intime dont tu as du mal à parler à cause de ton éducation ou de ta culture ?","มีเรื่องใกล้ชิดไหนที่เธอพูดยาก เพราะการเลี้ยงดูหรือวัฒนธรรม"],
+['dare','d',"Choisissez un mot de code rien qu'à vous, qui veut dire « j'ai envie de toi ». Dans quelle langue ?","ตั้งรหัสลับของเราสองคน ที่แปลว่า 'ฉันอยากได้เธอ' จะใช้ภาษาอะไร"],
+['talk','p',"Si tu pouvais revivre un de nos moments ensemble, lequel ?","ถ้าย้อนกลับไปได้หนึ่งช่วงเวลาของเรา จะเลือกช่วงไหน"],
+['guess','p',"Ce qui me manque le plus de toi le soir…","สิ่งที่ฉันคิดถึงในตัวเธอที่สุดตอนกลางคืน…",[["Ta chaleur","ความอบอุ่นของเธอ"],["Ta voix","เสียงของเธอ"],["Ton odeur","กลิ่นของเธอ"],["Tes bêtises","ความเพี้ยนของเธอ"]]],
+['talk','d',"Qu'aimerais-tu que je comprenne mieux sur ton corps ou ton désir ?","มีอะไรเกี่ยวกับร่างกายหรือความปรารถนาของเธอ ที่อยากให้ฉันเข้าใจมากขึ้น"],
+['talk','p',"Trois mots pour dire comment tu te sens dans mes bras.","สามคำที่บอกว่าเธอรู้สึกยังไงในอ้อมกอดของฉัน"]
+]);
+
+addRows('culture','u',1,[
+['quiz','e',"En France, combien de bises fait-on pour dire bonjour ?","ในฝรั่งเศส เวลาทักทายหอมแก้มกี่ครั้ง",[["Toujours 2","2 ครั้งเสมอ"],["De 1 à 4, selon la région","1 ถึง 4 ครั้ง แล้วแต่ภูมิภาค"],["Toujours 3","3 ครั้งเสมอ"],["Aucune","ไม่หอมเลย"]],{a:1,f:["Paris en fait 2, une partie du sud 3, et certains coins de l'ouest jusqu'à 4. En Thaïlande, on ne se touche pas pour saluer : on fait le wai.","ปารีสหอม 2 ครั้ง ทางใต้บางที่ 3 ครั้ง บางพื้นที่ทางตะวันตกถึง 4 ครั้ง ส่วนคนไทยไม่แตะตัวกันตอนทักทาย แต่ไหว้"]}],
+['quiz','e',"Comment s'appelle le salut thaï, mains jointes ?","การพนมมือทักทายแบบไทยเรียกว่าอะไร",[["Le wai","ไหว้"],["Le namasté","นมัสเต"],["Le kowtow","โขกศีรษะ"],["La révérence","ถอนสายบัว"]],{a:0,f:["Plus les mains sont hautes, plus le respect est grand, et les plus jeunes saluent en premier. En France, on se serre la main ou on se fait la bise, et le respect passe surtout par les mots.","ยิ่งยกมือสูง ยิ่งเคารพมาก และเด็กกว่าไหว้ก่อน ส่วนคนฝรั่งเศสจับมือหรือหอมแก้ม และแสดงความเคารพด้วยคำพูดเป็นหลัก"],k:["Montre-moi le bon wai pour tes parents. Et toi, entraîne-toi à la bise.","สอนฉันไหว้พ่อแม่เธอให้ถูก แล้วเธอลองฝึกหอมแก้มแบบฝรั่งเศสด้วย"]}],
+['quiz','e',"La première fois qu'on rencontre ses beaux-parents en France, on leur dit…","ครั้งแรกที่เจอพ่อแม่แฟนในฝรั่งเศส ควรใช้คำว่า…",[["« Vous », par respect","'vous' เพื่อแสดงความเคารพ"],["« Tu », pour être proche","'tu' ให้ดูสนิท"],["« Papa » et « maman »","'พ่อ' กับ 'แม่'"],["Rien, on attend qu'ils parlent","ไม่พูด รอให้ท่านพูดก่อน"]],{a:0,f:["Le « vous » marque le respect ; on passe au « tu » quand ils le proposent. En thaï, le respect passe par « khrap » ou « kha », et par les mots « phi » et « nong ».","'vous' แสดงความเคารพ จะเปลี่ยนเป็น 'tu' เมื่อท่านชวน ส่วนภาษาไทยแสดงความเคารพด้วย ครับ ค่ะ และคำว่า พี่ น้อง"]}],
+['quiz','e',"À quelle heure dîne-t-on souvent en France ?","คนฝรั่งเศสมักกินข้าวเย็นกี่โมง",[["Vers 18 h","ราว 18.00 น."],["Vers 20 h","ราว 20.00 น."],["Vers 22 h","ราว 22.00 น."],["On ne dîne pas","ไม่กินมื้อเย็น"]],{a:1,f:["Et entre les repas, on grignote peu. En Thaïlande, on mange plus souvent, par petites portions, et la street food est partout à toute heure.","และไม่ค่อยกินจุบจิบระหว่างมื้อ ส่วนคนไทยกินบ่อยกว่า ทีละน้อย และมีสตรีทฟู้ดทุกเวลา"]}],
+['quiz','e',"Combien de temps peut durer un repas de fête en France ?","มื้ออาหารวันพิเศษในฝรั่งเศสกินนานแค่ไหน",[["30 minutes","30 นาที"],["1 heure","1 ชั่วโมง"],["3 heures ou plus","3 ชั่วโมงขึ้นไป"],["10 minutes","10 นาที"]],{a:2,f:["Les plats arrivent l'un après l'autre : entrée, plat, fromage, dessert, café. Le « repas gastronomique des Français » est à l'UNESCO depuis 2010. En Thaïlande, tout arrive ensemble au centre de la table et on partage.","อาหารมาทีละจาน: อาหารเรียกน้ำย่อย จานหลัก ชีส ของหวาน กาแฟ และเป็นมรดกยูเนสโกตั้งแต่ปี 2010 ส่วนคนไทยวางอาหารทุกอย่างกลางโต๊ะแล้วแบ่งกันกิน"],k:["Tu préfères quoi : les plats l'un après l'autre, ou tout partagé au milieu ?","ชอบแบบไหน กินทีละจาน หรือวางรวมกันกลางโต๊ะ"]}],
+['quiz','e',"Le général de Gaulle se plaignait de gouverner un pays qui avait combien de fromages ?","นายพลเดอโกลบ่นว่าปกครองประเทศที่มีชีสกี่ชนิด",[["46","46"],["246","246"],["1 000","1,000"],["12","12"]],{a:1,f:["Aujourd'hui, on en compte bien plus. Pour un Français, un repas sans fromage, c'est presque triste. En Thaïlande, le fromage reste rare dans la cuisine traditionnelle.","ปัจจุบันมีมากกว่านั้นอีก สำหรับคนฝรั่งเศส มื้ออาหารที่ไม่มีชีสเกือบจะน่าเศร้า ส่วนอาหารไทยดั้งเดิมแทบไม่ใช้ชีสเลย"]}],
+['quiz','e',"En France, où pose-t-on son pain pendant le repas ?","ในฝรั่งเศส ระหว่างกินข้าว วางขนมปังไว้ที่ไหน",[["Directement sur la table","บนโต๊ะเลย"],["Dans l'assiette","ในจาน"],["Sur ses genoux","บนตัก"],["On n'en mange pas","ไม่กินขนมปัง"]],{a:0,f:["Le pain est posé à côté de l'assiette et sert à « saucer » le plat. En Thaïlande, c'est le riz qui accompagne tout.","วางขนมปังข้างจาน แล้วใช้เช็ดซอสในจาน ส่วนคนไทยมีข้าวเป็นคู่กับทุกอย่าง"]}],
+['quiz','e',"En France, le grand repas de Noël a souvent lieu…","ในฝรั่งเศส มื้อใหญ่วันคริสต์มาสมักจัดเมื่อไหร่",[["Le 24 au soir","คืนวันที่ 24"],["Le 25 au matin","เช้าวันที่ 25"],["Le 31 décembre","31 ธันวาคม"],["Le 6 janvier","6 มกราคม"]],{a:0,f:["C'est le « réveillon », en famille, avec huîtres, foie gras et bûche. En Thaïlande, Noël n'est pas une fête traditionnelle, mais les centres commerciaux le décorent beaucoup.","เรียกว่า 'เรวัยยง' กินกับครอบครัว มีหอยนางรม ฟัวกรา และเค้กขอนไม้ ส่วนในไทยคริสต์มาสไม่ใช่เทศกาลดั้งเดิม แต่ห้างตกแต่งสวยมาก"],k:["Comment fêtera-t-on Noël, nous deux ?","คริสต์มาสของเราสองคนจะฉลองยังไง"]}],
+['quiz','e',"À minuit, le 31 décembre, les Français…","เที่ยงคืนวันที่ 31 ธันวาคม คนฝรั่งเศส…",[["S'embrassent et se souhaitent une bonne année","หอมแก้มและอวยพรปีใหม่"],["S'arrosent d'eau","สาดน้ำกัน"],["Mangent 12 grains de raisin","กินองุ่น 12 ลูก"],["Lâchent des lanternes","ปล่อยโคมลอย"]],{a:0,f:["On a jusqu'à fin janvier pour souhaiter « bonne année ». La Thaïlande, elle, a trois Nouvel An : le 1er janvier, le Nouvel An chinois et Songkran en avril.","คนฝรั่งเศสอวยพรปีใหม่ได้ถึงปลายมกราคม ส่วนไทยมีปีใหม่สามครั้ง: 1 มกราคม ตรุษจีน และสงกรานต์ในเดือนเมษายน"]}],
+['quiz','e',"Le 14 juillet, la France fête…","วันที่ 14 กรกฎาคม ฝรั่งเศสฉลองอะไร",[["La prise de la Bastille","การทลายคุกบาสตีย์"],["La fin d'une guerre","สิ้นสุดสงคราม"],["L'anniversaire du président","วันเกิดประธานาธิบดี"],["La fête des pères","วันพ่อ"]],{a:0,f:["En 1789, le peuple de Paris prend la prison de la Bastille : c'est le début de la Révolution. En Thaïlande, la fête des pères est le 5 décembre, anniversaire du roi Rama IX.","ปี 1789 ชาวปารีสบุกยึดคุกบาสตีย์ เป็นจุดเริ่มการปฏิวัติ ส่วนวันพ่อของไทยคือ 5 ธันวาคม วันคล้ายวันพระราชสมภพรัชกาลที่ 9"]}],
+['quiz','e',"Que fait-on le 1er avril en France ?","วันที่ 1 เมษายน คนฝรั่งเศสทำอะไร",[["On colle un poisson en papier dans le dos des gens","แอบแปะปลากระดาษที่หลังคนอื่น"],["On mange des œufs","กินไข่"],["On s'arrose d'eau","สาดน้ำกัน"],["On offre des fleurs","ให้ดอกไม้"]],{a:0,f:["C'est le « poisson d'avril », la journée des blagues. À la mi-avril, la Thaïlande s'arrose pour Songkran.","เรียกว่า 'ปลาเดือนเมษายน' เป็นวันแกล้งกัน ส่วนกลางเดือนเมษายนคนไทยสาดน้ำกันวันสงกรานต์"]}],
+['quiz','e',"Combien de semaines de congés payés a un salarié en France ?","พนักงานในฝรั่งเศสมีวันหยุดพักร้อนกี่สัปดาห์ต่อปี",[["2","2"],["5","5"],["10","10"],["1","1"]],{a:1,f:["Cinq semaines, et beaucoup de Français partent en août : Paris se vide. En Thaïlande, le minimum légal est de 6 jours par an, avec de nombreux jours fériés.","ห้าสัปดาห์ และคนฝรั่งเศสจำนวนมากไปเที่ยวในเดือนสิงหาคมจนปารีสเงียบ ส่วนในไทยกฎหมายกำหนดขั้นต่ำ 6 วันต่อปี แต่มีวันหยุดนักขัตฤกษ์เยอะ"],k:["Pour toi, le travail ou le temps libre, qu'est-ce qui passe en premier ?","สำหรับเธอ งานหรือเวลาว่าง อะไรสำคัญกว่า"]}],
+['quiz','p',"La France est un pays laïque. Cela veut dire que…","ฝรั่งเศสเป็นรัฐฆราวาส หมายความว่า…",[["L'État ne favorise aucune religion","รัฐไม่สนับสนุนศาสนาใดเป็นพิเศษ"],["La religion est interdite","ห้ามนับถือศาสนา"],["Tout le monde est catholique","ทุกคนเป็นคาทอลิก"],["On prie à l'école","สวดมนต์ที่โรงเรียน"]],{a:0,f:["Chacun croit ce qu'il veut, mais l'école et l'administration restent neutres. En Thaïlande, plus de 90 % des habitants sont bouddhistes, et les moines font partie de la vie quotidienne.","ทุกคนนับถืออะไรก็ได้ แต่โรงเรียนและหน่วยงานรัฐต้องเป็นกลาง ส่วนในไทยคนกว่า 90% นับถือพุทธ และพระสงฆ์อยู่ในชีวิตประจำวัน"],k:["Quelle place veux-tu donner à la spiritualité dans notre foyer ?","อยากให้ความเชื่อทางศาสนามีบทบาทแค่ไหนในบ้านของเรา"]}],
+['quiz','e',"Quelle est la devise de la France ?","คำขวัญประจำชาติฝรั่งเศสคืออะไร",[["Liberté, Égalité, Fraternité","เสรีภาพ เสมอภาค ภราดรภาพ"],["Dieu, Roi, Patrie","พระเจ้า กษัตริย์ ปิตุภูมิ"],["Travail, Famille, Patrie","งาน ครอบครัว ปิตุภูมิ"],["Paix et Amour","สันติภาพและความรัก"]],{a:0,f:["La Thaïlande a aussi ses trois piliers : la Nation, la Religion et la Monarchie (« chat, satsana, phra mahakasat »).","ส่วนไทยก็มีสามสถาบันหลัก: ชาติ ศาสนา พระมหากษัตริย์"],k:["Laquelle de ces valeurs compte le plus pour toi ?","ค่านิยมไหนสำคัญกับเธอที่สุด"]}],
+['quiz','e',"En entrant dans une boulangerie en France, on dit d'abord…","เข้าร้านขนมปังในฝรั่งเศส ต้องพูดอะไรก่อน",[["« Bonjour »","'Bonjour' (สวัสดี)"],["« Une baguette »","'ขอบาแกตหนึ่งแท่ง'"],["Rien","ไม่พูดอะไร"],["« Merci »","'ขอบคุณ'"]],{a:0,f:["Oublier le « bonjour » est vu comme très impoli. En Thaïlande, c'est le sourire, le wai et les mots « khrap » ou « kha » qui montrent la politesse.","ลืมพูด 'bonjour' ถือว่าเสียมารยาทมาก ส่วนในไทยแสดงความสุภาพด้วยรอยยิ้ม การไหว้ และคำว่า ครับ ค่ะ"]}],
+['quiz','e',"Au restaurant en France, le pourboire est…","ในร้านอาหารฝรั่งเศส ทิปเป็นแบบไหน",[["Facultatif, le service est déjà compris","ไม่บังคับ รวมค่าบริการแล้ว"],["Obligatoire, 20 %","บังคับ 20%"],["Interdit","ห้ามให้"],["Donné directement au chef","ให้เชฟโดยตรง"]],{a:0,f:["On laisse un peu si on est content. En Thaïlande non plus, ce n'est pas obligatoire, mais on laisse souvent la petite monnaie.","ถ้าพอใจก็ให้เพิ่มเล็กน้อย ในไทยก็ไม่บังคับเหมือนกัน แต่คนมักทิ้งเศษเหรียญไว้"]}],
+['quiz','e',"L'« apéro », en France, c'est…","'อาเปโร' ในฝรั่งเศสคืออะไร",[["Boire un verre et grignoter avant le repas","ดื่มและกินของว่างก่อนมื้ออาหาร"],["Le dessert","ของหวาน"],["Le petit-déjeuner","อาหารเช้า"],["Une sieste","งีบหลับ"]],{a:0,f:["C'est un vrai rituel entre amis ou en famille. Il peut même remplacer le dîner : on appelle ça un « apéro dînatoire ».","เป็นธรรมเนียมสำคัญกับเพื่อนหรือครอบครัว บางครั้งกินจนแทนมื้อเย็นไปเลย เรียกว่า 'อาเปโรดีนาตัวร์'"]}],
+['quiz','p',"À table, les Français adorent…","ที่โต๊ะอาหาร คนฝรั่งเศสชอบ…",[["Débattre, même de politique","ถกเถียง แม้แต่เรื่องการเมือง"],["Manger en silence","กินเงียบๆ"],["Regarder la télévision","ดูทีวี"],["Manger très vite","กินเร็วมาก"]],{a:0,f:["Être en désaccord n'est pas impoli en France : on argumente, puis on trinque. En Thaïlande, on évite plutôt le conflit ouvert pour ne faire perdre la face à personne.","ในฝรั่งเศส การเห็นต่างไม่ใช่เรื่องเสียมารยาท เถียงกันเสร็จก็ชนแก้วกัน ส่วนคนไทยเลี่ยงการขัดแย้งตรงๆ เพื่อไม่ให้ใครเสียหน้า"],k:["Quand on n'est pas d'accord, tu préfères en débattre tout de suite ou attendre que ça se calme ?","เวลาเราเห็นไม่ตรงกัน เธอชอบคุยกันทันที หรือรอให้ใจเย็นก่อน"]}],
+['quiz','e',"Le « sport national » des Français, selon la blague, c'est…","ตามมุกตลก 'กีฬาประจำชาติ' ของคนฝรั่งเศสคือ…",[["Râler (se plaindre)","บ่น"],["Le football","ฟุตบอล"],["La pétanque","เปตอง"],["Le vélo","ปั่นจักรยาน"]],{a:0,f:["Se plaindre est presque un art de vivre, souvent pour créer du lien plutôt que par vraie colère. En Thaïlande, montrer son mécontentement en public est plutôt mal vu.","การบ่นเกือบเป็นวิถีชีวิต มักเป็นการสร้างความสนิทมากกว่าโกรธจริง ส่วนในไทย การแสดงความไม่พอใจในที่สาธารณะไม่ค่อยดีนัก"],k:["Ça t'énerve ou ça te fait rire quand je râle ?","เวลาฉันบ่น เธอหงุดหงิดหรือขำ"]}],
+['quiz','e',"Quel pays gagne très souvent des médailles mondiales… de pétanque ?","ประเทศไหนได้เหรียญเปตองระดับโลกบ่อยมาก",[["La Thaïlande","ไทย"],["Le Japon","ญี่ปุ่น"],["Le Brésil","บราซิล"],["Le Canada","แคนาดา"]],{a:0,f:["La pétanque est née à La Ciotat, en Provence, en 1907. Elle est devenue très populaire en Thaïlande, qui fait partie des meilleures nations du monde.","เปตองเกิดที่เมืองลาซีโอตาในแคว้นโพรวองซ์ ปี 1907 และได้รับความนิยมมากในไทย จนไทยเป็นหนึ่งในชาติที่เก่งที่สุดในโลก"]}],
+['quiz','e',"La tour Eiffel devait, au départ…","ตอนแรกหอไอเฟลถูกวางแผนว่าจะ…",[["Être démontée après 20 ans","ถูกรื้อหลัง 20 ปี"],["Devenir une église","เป็นโบสถ์"],["Servir de phare","เป็นประภาคาร"],["Être deux fois plus haute","สูงกว่านี้สองเท่า"]],{a:0,f:["Construite pour l'Exposition universelle de 1889, elle devait disparaître en 1909. Ses antennes radio l'ont sauvée.","สร้างเพื่องานมหกรรมโลกปี 1889 และควรถูกรื้อในปี 1909 แต่เสาอากาศวิทยุช่วยให้ยังอยู่"]}],
+['quiz','e',"Pourquoi se regarde-t-on dans les yeux en trinquant en France ?","ทำไมคนฝรั่งเศสต้องสบตากันตอนชนแก้ว",[["Sinon, sept ans de malheur en amour","ไม่งั้นจะโชคร้ายเรื่องความรักเจ็ดปี"],["Par respect pour le chef","เพื่อเคารพเชฟ"],["Pour vérifier qu'on n'est pas ivre","เพื่อเช็กว่ายังไม่เมา"],["Aucune raison","ไม่มีเหตุผล"]],{a:0,f:["C'est une superstition, mais tout le monde la respecte. On dit « santé ! » ou « tchin ! ». En Thaïlande, on dit « chon kaew ! ».","เป็นความเชื่อ แต่ทุกคนทำตาม คนฝรั่งเศสพูดว่า 'santé!' หรือ 'tchin!' ส่วนคนไทยพูดว่า 'ชนแก้ว!'"]}],
+['quiz','p',"En France, un mariage est légalement valable quand il est célébré…","ในฝรั่งเศส การแต่งงานจะถูกต้องตามกฎหมายเมื่อจัดที่…",[["À la mairie","ศาลาว่าการเมือง (แมรี)"],["À l'église seulement","โบสถ์เท่านั้น"],["Au tribunal","ศาล"],["À la maison","ที่บ้าน"]],{a:0,f:["Seul le mariage civil à la mairie compte légalement ; la cérémonie religieuse est facultative et vient après. En Thaïlande, la cérémonie traditionnelle se fait souvent à la maison avec les moines et le « rot nam sang », et l'enregistrement se fait au bureau du district.","มีแค่การแต่งงานที่ศาลาว่าการเมืองที่ถูกกฎหมาย พิธีทางศาสนาจะทำหรือไม่ก็ได้ ส่วนในไทย พิธีมักจัดที่บ้าน มีพระสงฆ์และพิธีรดน้ำสังข์ แล้วไปจดทะเบียนที่อำเภอ"]}],
+['quiz','p',"Dans un mariage thaï, le « sin sot » est…","ในงานแต่งไทย 'สินสอด' คือ…",[["Une dot offerte à la famille de la mariée","เงินหรือทองที่มอบให้ครอบครัวเจ้าสาว"],["Une danse","การเต้นรำ"],["Un gâteau","เค้ก"],["Une promesse écrite","คำสัญญาที่เขียนไว้"]],{a:0,f:["C'est une marque de respect envers les parents qui ont élevé la mariée, et elle est parfois rendue au couple après le mariage. Cette tradition n'existe pas en France.","เป็นการแสดงความเคารพพ่อแม่ที่เลี้ยงเจ้าสาวมา บางครอบครัวคืนให้คู่บ่าวสาวหลังงาน ประเพณีนี้ไม่มีในฝรั่งเศส"],k:["Parlons-en franchement : qu'en pensent ta famille et la mienne ?","คุยกันตรงๆ เลย ครอบครัวเธอกับครอบครัวฉันคิดยังไงเรื่องนี้"]}],
+['quiz','e',"Chez des Français, enlève-t-on ses chaussures en entrant ?","ไปบ้านคนฝรั่งเศส ต้องถอดรองเท้าไหม",[["Pas forcément, ça dépend des familles","ไม่เสมอไป แล้วแต่บ้าน"],["Toujours","ถอดเสมอ"],["Jamais, c'est impoli","ห้ามถอด เสียมารยาท"],["Seulement le dimanche","เฉพาะวันอาทิตย์"]],{a:0,f:["Beaucoup de Français gardent leurs chaussures à la maison. En Thaïlande, on les retire toujours avant d'entrer dans une maison ou un temple.","คนฝรั่งเศสหลายคนใส่รองเท้าในบ้าน ส่วนคนไทยถอดรองเท้าเสมอก่อนเข้าบ้านหรือวัด"],k:["Chez nous, ce sera chaussures ou pas ?","บ้านของเรา จะถอดรองเท้าหรือไม่"]}],
+['quiz','e',"Les Français mangent-ils vraiment des cuisses de grenouille ?","คนฝรั่งเศสกินขากบจริงไหม",[["Oui, mais rarement, surtout au restaurant","จริง แต่ไม่บ่อย ส่วนใหญ่กินที่ร้าน"],["Tous les jours","ทุกวัน"],["Jamais, c'est une légende","ไม่เลย เป็นแค่ตำนาน"],["Seulement à Noël","เฉพาะคริสต์มาส"]],{a:0,f:["C'est un plat de fête dans certaines régions. Les Thaïlandais en mangent bien plus souvent que les Français, frites ou en curry !","เป็นอาหารพิเศษในบางภูมิภาค คนไทยกินกบบ่อยกว่าคนฝรั่งเศสอีก ทั้งทอดและแกง!"]}],
+['quiz','e',"En 2022, l'UNESCO a inscrit quel savoir-faire français à son patrimoine ?","ปี 2022 ยูเนสโกขึ้นทะเบียนภูมิปัญญาฝรั่งเศสอะไร",[["La baguette","ขนมปังบาแกต"],["Le croissant","ครัวซองต์"],["Le fromage","ชีส"],["La bise","การหอมแก้ม"]],{a:0,f:["Le croissant, lui, est d'origine autrichienne. La Thaïlande a aussi son inscription : le massage thaï, depuis 2019.","ครัวซองต์มีต้นกำเนิดจากออสเตรีย ส่วนไทยมี 'นวดไทย' ที่ขึ้นทะเบียนตั้งแต่ปี 2019"]}],
+['quiz','e',"Pourquoi appelle-t-on la France « l'Hexagone » ?","ทำไมเรียกฝรั่งเศสว่า 'เฮกซากอน'",[["Pour sa forme à six côtés","เพราะรูปร่างคล้ายหกเหลี่ยม"],["Pour ses six régions","เพราะมีหกภูมิภาค"],["À cause d'un roi","เพราะกษัตริย์องค์หนึ่ง"],["Pour ses six fleuves","เพราะมีแม่น้ำหกสาย"]],{a:0,f:["Et la carte de la Thaïlande est souvent comparée à une tête d'éléphant, avec le sud comme trompe.","ส่วนแผนที่ประเทศไทยมักถูกเปรียบว่าเหมือนหัวช้าง โดยมีภาคใต้เป็นงวง"]}],
+['quiz','e',"Dans combien de pays le français est-il une langue officielle ?","ภาษาฝรั่งเศสเป็นภาษาราชการในกี่ประเทศ",[["Environ 5","ประมาณ 5"],["Environ 29","ประมาณ 29"],["Plus de 80","มากกว่า 80"],["Un seul","ประเทศเดียว"]],{a:1,f:["On le parle sur les cinq continents. Le thaï est surtout parlé en Thaïlande, mais il est proche du lao : Thaïlandais et Laotiens se comprennent souvent.","พูดกันทั้งห้าทวีป ส่วนภาษาไทยพูดในไทยเป็นหลัก แต่ใกล้กับภาษาลาว คนไทยกับคนลาวจึงมักเข้าใจกัน"]}],
+['quiz','p',"En France, à quel âge quitte-t-on souvent le domicile de ses parents ?","ในฝรั่งเศส คนมักย้ายออกจากบ้านพ่อแม่ตอนอายุเท่าไร",[["Vers 23-24 ans","ราว 23-24 ปี"],["Seulement après le mariage","หลังแต่งงานเท่านั้น"],["Jamais","ไม่ย้ายเลย"],["À 15 ans","15 ปี"]],{a:0,f:["Les jeunes Français prennent souvent leur indépendance pour les études ou le travail. En Thaïlande, plusieurs générations vivent souvent ensemble, et prendre soin de ses parents est un devoir de cœur.","คนหนุ่มสาวฝรั่งเศสมักแยกไปอยู่เองเพื่อเรียนหรือทำงาน ส่วนในไทยหลายรุ่นมักอยู่บ้านเดียวกัน และการดูแลพ่อแม่เป็นหน้าที่จากใจ"],k:["Plus tard, comment veux-tu qu'on s'occupe de nos parents ?","ในอนาคต อยากให้เราดูแลพ่อแม่ของเรายังไง"]}],
+['quiz','e',"Que veut dire « sanuk », un mot thaï très important ?","คำว่า 'สนุก' ภาษาฝรั่งเศสใกล้กับคำไหนที่สุด",[["Le plaisir, l'amusement","plaisir (ความสนุก ความเพลิดเพลิน)"],["La politesse","politesse (ความสุภาพ)"],["Le travail","travail (งาน)"],["La nourriture","nourriture (อาหาร)"]],{a:0,f:["Pour beaucoup de Thaïlandais, une activité, même le travail, devrait être « sanuk ». Les Français parlent de « joie de vivre »… tout en râlant un peu.","สำหรับคนไทย ทุกอย่างแม้แต่งานก็ควร 'สนุก' ส่วนคนฝรั่งเศสพูดถึง 'joie de vivre' ความสุขในการใช้ชีวิต แต่ก็บ่นไปด้วย"]}],
+['quiz','e',"« Mai pen rai », expression thaïe très courante, veut dire…","'ไม่เป็นไร' ตรงกับภาษาฝรั่งเศสคำไหนที่สุด",[["Pas grave, ce n'est rien","Pas grave (ไม่เป็นไร)"],["Je ne sais pas","Je ne sais pas (ไม่รู้)"],["Fais attention","Fais attention (ระวังนะ)"],["Pas maintenant","Pas maintenant (ไม่ใช่ตอนนี้)"]],{a:0,f:["C'est presque une philosophie : garder son calme et ne faire perdre la face à personne. Un Français dira « c'est pas grave »… mais il en reparlera peut-être.","เกือบเป็นปรัชญาชีวิต: ใจเย็น ไม่ทำให้ใครเสียหน้า คนฝรั่งเศสก็พูดว่า 'c'est pas grave' แต่อาจกลับมาพูดเรื่องนี้อีก"]}],
+['quiz','e',"Avant un film au cinéma en Thaïlande, que fait-on ?","ก่อนหนังฉายในโรงภาพยนตร์ไทย คนดูทำอะไร",[["On se lève pour l'hymne royal","ยืนเคารพเพลงสรรเสริญพระบารมี"],["On applaudit","ปรบมือ"],["On chante en chœur","ร้องเพลงพร้อมกัน"],["Rien de spécial","ไม่มีอะไรพิเศษ"]],{a:0,f:["La monarchie est très respectée en Thaïlande. En France, l'hymne national, La Marseillaise, s'entend surtout aux matchs et aux cérémonies.","สถาบันพระมหากษัตริย์ได้รับความเคารพมากในไทย ส่วนในฝรั่งเศส เพลงชาติ 'ลามาร์แซแยซ' จะได้ยินในการแข่งกีฬาและพิธีการ"]}],
+['quiz','e',"En 2026, en quelle année est-on selon le calendrier bouddhiste thaï ?","ปี 2026 ตรงกับพุทธศักราชเท่าไร",[["2569","2569"],["2483","2483"],["2600","2600"],["2526","2526"]],{a:0,f:["Le calendrier thaï a 543 ans d'avance : 2026 + 543 = 2569. En France, on utilise uniquement le calendrier grégorien.","ปฏิทินไทยนำหน้า 543 ปี: 2026 + 543 = 2569 ส่วนฝรั่งเศสใช้แค่คริสต์ศักราช"]}],
+['quiz','e',"Quelle fête thaïe célèbre la pleine lune en faisant flotter de petits paniers sur l'eau ?","เทศกาลไทยไหนที่ฉลองคืนพระจันทร์เต็มดวงด้วยการปล่อยของลอยน้ำ",[["Loy Krathong","ลอยกระทง"],["Songkran","สงกรานต์"],["Visakha Bucha","วิสาขบูชา"],["Le Nouvel An chinois","ตรุษจีน"]],{a:0,f:["Elle a lieu à la pleine lune du 12e mois lunaire, souvent en novembre : on laisse partir ses soucis et on fait un vœu. Parfait pour Le Jeu de la Lune.","ตรงกับคืนเพ็ญเดือนสิบสอง มักอยู่ในเดือนพฤศจิกายน เป็นการลอยความทุกข์และอธิษฐาน เหมาะกับเกมพระจันทร์ของเราที่สุด"],k:["Quel vœu ferais-tu cette année ?","ปีนี้เธอจะอธิษฐานว่าอะไร"]}],
+['quiz','e',"Que veut dire « 555 » dans un message thaï ?","'555' ในข้อความภาษาไทยหมายถึงอะไร",[["Hahaha","ฮ่าฮ่าฮ่า"],["Bisous","จุ๊บๆ"],["Au revoir","ลาก่อน"],["Je suis fâché(e)","โกรธแล้ว"]],{a:0,f:["Le chiffre 5 se dit « ha » en thaï. En France, on écrit « mdr », pour « mort de rire ».","เลข 5 ภาษาไทยออกเสียงว่า 'ห้า' ส่วนคนฝรั่งเศสพิมพ์ 'mdr' ย่อมาจาก 'หัวเราะจนตาย'"]}],
+['quiz','e',"Pourquoi ne touche-t-on pas la tête de quelqu'un en Thaïlande ?","ทำไมในประเทศไทยไม่ควรจับหัวคนอื่น",[["C'est la partie la plus respectée du corps","ศีรษะเป็นของสูง"],["Ça fait tomber les cheveux","ทำให้ผมร่วง"],["C'est réservé aux médecins","สงวนไว้ให้หมอ"],["Aucune raison, c'est un mythe","ไม่มีเหตุผล เป็นความเชื่อผิดๆ"]],{a:0,f:["La tête est la partie la plus haute ; les pieds, la plus basse : on ne pointe jamais quelqu'un avec le pied. En France, caresser la tête d'un enfant est un geste affectueux banal.","ศีรษะเป็นของสูง เท้าเป็นของต่ำ จึงไม่ใช้เท้าชี้คนอื่น ส่วนในฝรั่งเศส การลูบหัวเด็กเป็นท่าทางแสดงความเอ็นดูธรรมดา"]}],
+['quiz','e',"Que veut dire « phet » sur un menu thaï ?","คำว่า 'เผ็ด' ในภาษาฝรั่งเศสคือคำไหน",[["Épicé","épicé (เผ็ด)"],["Sucré","sucré (หวาน)"],["Végétarien","végétarien (มังสวิรัติ)"],["Froid","froid (เย็น)"]],{a:0,f:["Un « un peu épicé » thaï peut faire pleurer un Français. Pour un plat sans piment, on dit « mai phet ». En France, le plat le plus « épicé » contient souvent juste du poivre.","'เผ็ดนิดหน่อย' ของคนไทยอาจทำให้คนฝรั่งเศสน้ำตาไหล ส่วนอาหารฝรั่งเศสที่ว่า 'เผ็ด' มักมีแค่พริกไทย"]}],
+['quiz','e',"Quel était l'ancien nom de la Thaïlande ?","ชื่อเดิมของประเทศไทยคืออะไร",[["Siam","สยาม"],["Lanna","ล้านนา"],["Ayutthaya","อยุธยา"],["Sukhothai","สุโขทัย"]],{a:0,f:["Le pays s'appelle Thaïlande depuis 1939, et « thaï » veut dire « libre » : c'est le seul pays d'Asie du Sud-Est jamais colonisé par une puissance européenne, France comprise.","เปลี่ยนชื่อเป็นประเทศไทยในปี 1939 คำว่า 'ไท' แปลว่าอิสระ และไทยเป็นประเทศเดียวในเอเชียตะวันออกเฉียงใต้ที่ไม่เคยเป็นอาณานิคมของชาติยุโรป รวมถึงฝรั่งเศส"]}],
+['quiz','e',"Comment dit-on « je t'aime » en thaï ?","'Je t'aime' ในภาษาไทยพูดว่าอะไร",[["Chan rak thoe","ฉันรักเธอ"],["Sawasdee","สวัสดี"],["Khob khun","ขอบคุณ"],["Aroi","อร่อย"]],{a:0,f:["Un homme dit souvent « phom rak khun ». En français, « je t'aime » est un mot fort : pour un ami, on dit « je t'aime bien », ce qui veut dire… beaucoup moins.","ผู้ชายมักพูดว่า 'ผมรักคุณ' ส่วนภาษาฝรั่งเศส 'je t'aime' แปลว่ารักจริงๆ แต่ถ้าพูด 'je t'aime bien' จะแปลว่าแค่ชอบ ซึ่งน้อยกว่ามาก"],k:["Apprends-moi à le dire avec le bon ton, en vocal. Et toi, dis-le-moi en français.","สอนฉันพูดให้ถูกเสียงเป็นข้อความเสียง แล้วเธอลองพูดเป็นภาษาฝรั่งเศสด้วย"]}],
+['talk','d',"En France, on dit souvent ce qu'on pense franchement. En Thaïlande, on préserve l'harmonie. Comment veux-tu qu'on fasse, nous ?","คนฝรั่งเศสมักพูดตรงๆ ส่วนคนไทยรักษาความสงบ ไม่อยากให้ใครเสียหน้า แล้วเราสองคนจะทำยังไงดี"],
+['talk','p',"Quelle valeur de la culture de l'autre t'attire le plus ? Et laquelle te fait un peu peur ?","ค่านิยมไหนในวัฒนธรรมของอีกฝ่ายที่ดึงดูดเธอที่สุด และอะไรที่ทำให้เธอกลัวนิดๆ"],
+['talk','d',"Si on vit un jour en France, qu'est-ce qui te manquerait de la Thaïlande ? Et à l'inverse, si on vit en Thaïlande ?","ถ้าวันหนึ่งเราอยู่ฝรั่งเศส เธอจะคิดถึงอะไรของไทย แล้วถ้าอยู่ไทยล่ะ จะคิดถึงอะไรของฝรั่งเศส"],
+['talk','p',"Quel lieu, quelle habitude ou quelle valeur veux-tu garder de l'endroit où tu vis aujourd'hui ?","สถานที่ นิสัย หรือค่านิยมอะไรจากที่ที่เธออยู่ตอนนี้ ที่เธออยากเก็บไว้"],
+['talk','d',"Qu'attendent tes parents de la personne qui partage ta vie ? Que dois-je savoir avant de les rencontrer ?","พ่อแม่ของเธอคาดหวังอะไรจากคนที่ใช้ชีวิตกับเธอ ฉันควรรู้อะไรก่อนไปเจอท่าน"],
+['dare','p',"Montre-moi en vidéo comment saluer tes parents. Je m'entraîne.","ส่งวิดีโอสอนวิธีทักทายพ่อแม่ของเธอ แล้วฉันจะฝึก"],
+['dare','e',"Envoie la recette d'un plat de ton pays. L'autre le cuisine cette semaine et envoie la photo.","ส่งสูตรอาหารจากประเทศของเธอ อีกฝ่ายต้องทำภายในสัปดาห์นี้แล้วส่งรูปมา"],
+['dare','e',"Apprends 5 mots de ta langue à l'autre, en vocal. Interro à la prochaine visio.","ส่งข้อความเสียงสอนคำในภาษาของเธอ 5 คำ วิดีโอคอลครั้งหน้ามีสอบ"],
+['talk','p',"Quel cliché sur ton pays est faux ? Et lequel est un peu vrai ?","ภาพจำเรื่องประเทศเธอข้อไหนที่ผิด และข้อไหนจริงนิดๆ"],
+['talk','e',"Quel plat français veux-tu goûter en premier ? Et quel plat thaï dois-je absolument goûter ?","อาหารฝรั่งเศสจานไหนที่เธออยากชิมเป็นอย่างแรก และอาหารไทยจานไหนที่ฉันต้องลองให้ได้"]
+]);
+
+const SESSIONS={1:T("Premiers pas","ก้าวแรก"),2:T("On se rapproche","ใกล้กันขึ้น"),3:T("Cœur ouvert","เปิดใจ"),4:T("Sans filtre","ไม่มีฟิลเตอร์"),5:T("Marée haute","น้ำขึ้น"),6:T("Pleine lune","พระจันทร์เต็มดวง")};
+const LVPTS={e:1,p:2,d:3};
+const REWARDS=[
+ {at:10,r:T("Choisir le film de la prochaine soirée en visio","ได้เลือกหนังคืนวิดีโอคอลครั้งหน้า")},
+ {at:25,r:T("L'autre chante une chanson de ton choix en appel","อีกฝ่ายต้องร้องเพลงที่เธอเลือกตอนโทร")},
+ {at:45,r:T("Une vraie lettre écrite à la main, envoyée par la poste","จดหมายเขียนมือจริงๆ ส่งทางไปรษณีย์")},
+ {at:70,r:T("Un colis surprise de spécialités de son pays","พัสดุเซอร์ไพรส์ของขึ้นชื่อจากประเทศของอีกฝ่าย")},
+ {at:100,r:T("Une journée entière organisée par toi, aux retrouvailles","หนึ่งวันเต็มที่เธอวางแผนเอง ตอนได้เจอกัน")}
+];
+const EMOJIS=['❤️','😂','🥺','🔥','🤯','🫶'];
+const TZS=['Pacific/Tahiti','Asia/Bangkok','Europe/Paris','Asia/Tokyo','Australia/Sydney','America/Los_Angeles','America/New_York','Europe/London'];
+
+const I18N={
+fr:{tabPlay:"Jouer",tabUs:"Nous",tabTr:"Échanger",shareMsg:"🌙 {n} t'envoie ses réponses du Jeu de la Lune. Ouvre ce lien, ou copie-le dans l'onglet Échanger :",copiedShare:"Message copié. Colle-le dans WhatsApp.",badCode:"Ce lien ou ce code n'est pas reconnu. Copie le message en entier et réessaie.",ownCode:"C'est ton propre lien. Envoie-le à l'autre !",oldCode:"Tu as déjà des réponses plus récentes de cette personne.",imported:"Réponses de {p} reçues 🌙",inviteBtn:"Inviter par WhatsApp",sendBtn:"Envoyer mes réponses",recvBtn:"Recevoir",nudge:"Réponse gardée. Pense à l'envoyer à {p} 📤",exSend:"Envoyer à {p}",exUnsent:"{n} réponse(s) pas encore envoyée(s).",exAllSent:"Tout est envoyé.",exLast:"Dernier envoi :",exManual:"Si le partage ne s'est pas ouvert, copie ce message et envoie-le :",exRecv:"Recevoir de {p}",exPaste:"Colle ici le message reçu (le lien suffit)",exGot:"Dernières réponses de {p} :",exHowTitle:"Comment ça marche",exHow:["Tu joues, puis tu touches « Envoyer mes réponses » et tu choisis WhatsApp.","L'autre ouvre le lien reçu, ou le colle ici. Vos réponses se rejoignent et les résultats s'affichent.","Rien ne passe par un serveur : tout reste sur vos deux téléphones et dans vos messages.","Ne vide pas les données de ton navigateur : tes réponses ne sont gardées que sur ce téléphone."],
+ nodbTitle:"La partie partagée ne s'ouvre pas ici",
+ nodbBody:"Ouvrez cette page dans Claude en étant connecté(e). Pour jouer à deux, la personne qui a créé la page invite l'autre par e-mail comme « Éditeur » dans le menu de partage.",
+ tryLocal:"Essayer sur cet appareil",localBanner:"Mode solo : la partie est gardée sur ce téléphone, mais pas partagée. Ouvrez la page dans l'app Claude, connectés, pour jouer à deux.",
+ yourTurn:"À toi !",locked:"S'ouvre quand vous aurez joué ensemble les deux tiers de la session {n}.",hidden:"{n} cartes cachées",sess:"Session {n}",
+ since:"Depuis ta dernière visite, {p} a répondu à {n} carte(s).",nothingNew:"Rien de nouveau depuis ta dernière visite. {p} prépare sûrement quelque chose.",
+ noPartner:"Envoie le jeu à ton amour pour jouer à deux. Il ou elle n'a rien à installer.",
+ waitingCount:"{n} réponse(s) de {p} t'attendent, quand tu en as envie.",starList:"⭐ {p} veut que tu répondes en premier à {n} carte(s).",
+ t_guess:"Devine",t_quiz:"Quiz",quizStep:"Ta réponse",pickOne:"Choisis d'abord une réponse.",goodAns:"La bonne réponse",q2:"Deux génies 🎓",q1me:"Tu gagnes ce round 🏆",q1p:"{p} gagne ce round 🏆",q0:"Personne n'a trouvé… mais vous venez d'apprendre un truc 📚",surprise:"Surprise",allPlayed:"Tu as tout joué ici. Bravo !",noPressure:"Pas envie ce soir ? Ferme la carte, elle t'attendra. Aucune obligation, c'est un jeu.",t_talk:"Parle",t_dare:"Défi",l_e:"Léger",l_p:"Perso",l_d:"Profond",
+ guessStep:"1. Devine la réponse de {p}",mineStep:"2. Ta réponse à toi",send:"Valider",pickBoth:"Choisis d'abord une devinette et ta réponse.",
+ talkPh:"Écris ta réponse… dans ta langue, c'est très bien.",darePh:"Un petit mot sur ton défi (facultatif)",dareDone:"Défi fait !",
+ useMoon:"🌙 Passer",useStar:"⭐ Toi d'abord !",noMoon:"Plus de lune cette semaine. Courage.",noStar:"Ton étoile de la semaine est déjà utilisée.",
+ starSent:"Étoile envoyée à {p}",starFrom:"⭐ {p} veut que tu répondes en premier, avec des détails !",
+ you:"Toi",guessed:"Devinette",answered:"Réponse",
+ v2:"Télépathie confirmée 🔮",v1:"Un sur deux. Il y a du potentiel.",v0:"0 sur 2… vous vous connaissez depuis quand, déjà ? 😅",
+ skippedBy:"{p} a passé cette carte avec une lune. Pas de question, pas de jugement. 🌙",youSkipped:"Tu as passé cette carte avec une lune.",
+ dareBoth:"Défi relevé par les deux. Respect.",
+ fact:"Le saviez-vous ?",talkAbout:"À discuter ensemble",react:"Ta réaction",theirReact:"Réaction de {p} :",
+ translate:"Traduire",showIn:"Voir en {l}",lname_fr:"français",lname_th:"thaï",close:"Fermer",
+ waits:["{p} réfléchit très fort. Ça peut prendre un moment.","En attente de {p}… qui fait sûrement une sieste.","{p} n'a pas encore répondu. Le suspense est insoutenable.","Réponse gardée au secret. Maintenant on attend {p}, et on ne triche pas."],
+ customTitle:"Nos cartes maison",customIntro:"Écris une question pour {p}. Vous y répondrez tous les deux.",customPh:"Ta question…",customAdd:"Ajouter la carte",customBy:"Écrite par {p}",
+ customEmpty:"Pas encore de carte maison. La première est souvent la plus drôle.",customAdded:"Carte ajoutée",translating:"Traduction…",
+ trTitle:"Petit traducteur",trIntro:"Écris un message, traduis-le, puis copie-le dans WhatsApp.",trTo:"Traduire en",trGo:"Traduire",copy:"Copier",copied:"Copié",
+ noAi:"La traduction automatique n'est pas disponible sur cet appareil.",trErr:"La traduction n'a pas marché. Réessaie dans un instant.",
+ potTitle:"Notre cagnotte",pts:"points",potRule:"Une carte rapporte quand vous y avez répondu tous les deux : léger 1, perso 2, profond 3, et +1 par bonne devinette ou bonne réponse au quiz. Carte maison : 2.",
+ next:"Encore {n} pts avant : {r}",won:"Gagné ! Chacun peut le réclamer à l'autre.",allWon:"Tous les paliers sont gagnés. Inventez-en d'autres.",
+ telepathy:"Télépathie : {c} bonnes devinettes sur {n}.",
+ meetTitle:"Prochaines retrouvailles",meetDays:"Encore {n} jours avant de se voir",meetToday:"C'est aujourd'hui !!",meetNone:"Pas encore de date. Choisissez-en une, même approximative.",meetPast:"Cette date est passée. On en choisit une nouvelle ?",dateLbl:"Date",
+ jokersTitle:"Jokers de la semaine",moonRule:"Lune : passer une carte sans explication. Il t'en reste {n} cette semaine.",starRule:"Étoile : demander à l'autre de répondre en premier, avec des détails. Il t'en reste {n}.",jokersBack:"Ils reviennent chaque lundi.",
+ settings:"Réglages",nameLbl:"Ton prénom",langLbl:"Ta langue",tzLbl:"Ton fuseau horaire",save:"Enregistrer",saved:"Enregistré",switchP:"Changer de joueur sur ce téléphone",
+ saveErr:"L'enregistrement n'a pas marché. Vérifie ta connexion et réessaie.",
+ rulesTitle:"Comment on joue",rules:["Ouvrez une carte. Devine : tu devines la réponse de l'autre (cercle jaune), puis tu donnes la tienne (bleu).","Les réponses restent cachées jusqu'à ce que vous ayez joué tous les deux.","Ensuite, lisez l'anecdote et parlez de la question « À discuter » en appel.","Une session s'ouvre quand vous avez joué ensemble les deux tiers de la précédente. Plus on avance, plus c'est profond.","Tuile à moitié verte : une seule personne a répondu. Toute verte : vous deux.","En haut de l'onglet Jouer, choisissez une catégorie selon votre humeur du soir. Seul « Le parcours » se débloque par étapes."],
+ intimeTitle:"Avant d'ouvrir ces cartes",intimeBody:"Ces questions parlent de tendresse et de désir. Elles s'ouvrent seulement quand vous avez dit oui tous les deux. Chacun peut retirer son accord à tout moment, sans explication, et la lune 🌙 reste là pour passer une carte.",intimeYes:"partant(e)",intimeNotYet:"pas encore",intimeAgree:"Je suis partant(e)",intimeOff:"Retirer mon accord",intimeWait:"C'est noté. Les cartes s'ouvriront quand {p} aura dit oui aussi.",clockMe:"chez toi",clockP:"chez {p}",tomorrow:"demain",yesterday:"hier"},
+th:{tabPlay:"เล่น",tabUs:"เรา",tabTr:"แลกคำตอบ",copiedShare:"คัดลอกข้อความแล้ว วางใน WhatsApp ได้เลย",badCode:"ไม่รู้จักลิงก์หรือรหัสนี้ ลองคัดลอกข้อความทั้งหมดแล้วลองใหม่",ownCode:"นี่คือลิงก์ของเธอเอง ส่งให้อีกฝ่ายสิ!",oldCode:"เธอมีคำตอบที่ใหม่กว่าของคนนี้อยู่แล้ว",imported:"ได้รับคำตอบของ {p} แล้ว 🌙",inviteBtn:"ชวนผ่าน WhatsApp",sendBtn:"ส่งคำตอบของฉัน",recvBtn:"รับ",nudge:"บันทึกคำตอบแล้ว อย่าลืมส่งให้ {p} นะ 📤",exSend:"ส่งให้ {p}",exUnsent:"มีคำตอบที่ยังไม่ได้ส่ง {n} ใบ",exAllSent:"ส่งครบแล้ว",exLast:"ส่งล่าสุด:",exManual:"ถ้าหน้าต่างแชร์ไม่ขึ้น คัดลอกข้อความนี้แล้วส่งเอง:",exRecv:"รับจาก {p}",exPaste:"วางข้อความที่ได้รับตรงนี้ (แค่ลิงก์ก็พอ)",exGot:"คำตอบล่าสุดของ {p}:",exHowTitle:"วิธีใช้",exHow:["เล่นเสร็จแล้วกด “ส่งคำตอบของฉัน” แล้วเลือก WhatsApp","อีกฝ่ายเปิดลิงก์ที่ได้รับ หรือวางลิงก์ตรงนี้ คำตอบของเราจะรวมกันและผลจะขึ้นมา","ไม่มีเซิร์ฟเวอร์ ทุกอย่างอยู่ในโทรศัพท์ของเราสองคนและในแชทเท่านั้น","อย่าล้างข้อมูลเบราว์เซอร์ เพราะคำตอบเก็บไว้ในโทรศัพท์เครื่องนี้เท่านั้น"],
+ shareMsg:"🌙 {n} ส่งคำตอบเกมพระจันทร์มาให้ เปิดลิงก์นี้ หรือคัดลอกไปวางในแท็บ แลกคำตอบ:",nodbTitle:"",
+ nodbBody:"เปิดหน้านี้ใน Claude โดยเข้าสู่ระบบก่อน ถ้าจะเล่นสองคน คนที่สร้างหน้านี้ต้องเชิญอีกฝ่ายทางอีเมลในเมนูแชร์ เป็น 'ผู้แก้ไข' (Editor)",
+ tryLocal:"ลองเล่นบนเครื่องนี้",localBanner:"โหมดเล่นคนเดียว: บันทึกไว้ในเครื่องนี้แต่ไม่แชร์ เปิดหน้านี้ในแอป Claude แบบเข้าสู่ระบบเพื่อเล่นสองคน",
+ yourTurn:"ตาเธอ!",locked:"จะเปิดเมื่อเราเล่นรอบที่ {n} ด้วยกันได้สองในสาม",hidden:"การ์ดซ่อนอยู่ {n} ใบ",sess:"รอบที่ {n}",
+ since:"ตั้งแต่เธอเข้ามาครั้งล่าสุด {p} ตอบไป {n} ใบ",nothingNew:"ยังไม่มีอะไรใหม่ {p} น่าจะกำลังเตรียมอะไรอยู่",
+ noPartner:"ส่งเกมให้คนรักเพื่อเล่นด้วยกัน ไม่ต้องติดตั้งอะไรเลย",
+ waitingCount:"มีคำตอบของ {p} รอเธออยู่ {n} ใบ ว่างเมื่อไหร่ค่อยเล่น",starList:"⭐ {p} อยากให้เธอตอบก่อน {n} ใบ",
+ t_guess:"ทาย",t_quiz:"ควิซ",quizStep:"คำตอบของเธอ",pickOne:"เลือกคำตอบก่อนนะ",goodAns:"คำตอบที่ถูก",q2:"อัจฉริยะทั้งคู่ 🎓",q1me:"เธอชนะรอบนี้ 🏆",q1p:"{p} ชนะรอบนี้ 🏆",q0:"ไม่มีใครถูก… แต่ได้ความรู้ใหม่แล้ว 📚",surprise:"สุ่ม",allPlayed:"เล่นครบหมดแล้ว เก่งมาก!",noPressure:"คืนนี้ไม่อยากตอบ? ปิดการ์ดไว้ก่อน เดี๋ยวค่อยกลับมา ไม่มีการบังคับ นี่คือเกม",t_talk:"คุย",t_dare:"ภารกิจ",l_e:"เบาๆ",l_p:"ส่วนตัว",l_d:"ลึกซึ้ง",
+ guessStep:"1. ทายคำตอบของ {p}",mineStep:"2. คำตอบของเธอเอง",send:"ยืนยัน",pickBoth:"เลือกคำทายและคำตอบของเธอก่อนนะ",
+ talkPh:"พิมพ์คำตอบ… ใช้ภาษาของเธอได้เลย",darePh:"เล่าเกี่ยวกับภารกิจสักนิด (ไม่บังคับ)",dareDone:"ทำภารกิจแล้ว!",
+ useMoon:"🌙 ข้าม",useStar:"⭐ เธอตอบก่อน!",noMoon:"สัปดาห์นี้พระจันทร์หมดแล้ว สู้ๆ",noStar:"ดาวของสัปดาห์นี้ใช้ไปแล้ว",
+ starSent:"ส่งดาวให้ {p} แล้ว",starFrom:"⭐ {p} อยากให้เธอตอบก่อน เล่าละเอียดๆ นะ!",
+ you:"เธอ",guessed:"คำทาย",answered:"คำตอบ",
+ v2:"โทรจิตชัดๆ 🔮",v1:"ถูกหนึ่งในสอง มีแววนะ",v0:"0 จาก 2… รู้จักกันมานานแค่ไหนแล้วนะ 😅",
+ skippedBy:"{p} ข้ามการ์ดนี้ด้วยพระจันทร์ ไม่ถาม ไม่ตัดสิน 🌙",youSkipped:"เธอข้ามการ์ดนี้ด้วยพระจันทร์",
+ dareBoth:"ทำภารกิจสำเร็จทั้งคู่ นับถือเลย",
+ fact:"รู้หรือไม่",talkAbout:"ชวนคุยกัน",react:"ความรู้สึกของเธอ",theirReact:"{p} รู้สึกว่า:",
+ translate:"แปล",showIn:"ดูเป็น{l}",lname_fr:"ภาษาฝรั่งเศส",lname_th:"ภาษาไทย",close:"ปิด",
+ waits:["{p} กำลังคิดหนักมาก อาจใช้เวลาสักพัก","รอ {p} อยู่… น่าจะกำลังงีบ","{p} ยังไม่ตอบ ลุ้นจนทนไม่ไหวแล้ว","เก็บคำตอบเป็นความลับแล้ว ตอนนี้รอ {p} และห้ามโกงนะ"],
+ customTitle:"การ์ดที่เราเขียนเอง",customIntro:"เขียนคำถามให้ {p} แล้วเราตอบด้วยกันทั้งคู่",customPh:"คำถามของเธอ…",customAdd:"เพิ่มการ์ด",customBy:"เขียนโดย {p}",
+ customEmpty:"ยังไม่มีการ์ดที่เขียนเอง ใบแรกมักจะตลกที่สุด",customAdded:"เพิ่มการ์ดแล้ว",translating:"กำลังแปล…",
+ trTitle:"ตัวช่วยแปล",trIntro:"พิมพ์ข้อความ แปล แล้วคัดลอกไปส่งใน WhatsApp",trTo:"แปลเป็น",trGo:"แปล",copy:"คัดลอก",copied:"คัดลอกแล้ว",
+ noAi:"การแปลอัตโนมัติใช้ไม่ได้บนอุปกรณ์นี้",trErr:"แปลไม่สำเร็จ ลองใหม่อีกครั้งนะ",
+ potTitle:"กระปุกของเรา",pts:"แต้ม",potRule:"การ์ดจะได้แต้มเมื่อเราตอบครบทั้งคู่: เบาๆ 1 ส่วนตัว 2 ลึกซึ้ง 3 ทายถูกหรือตอบควิซถูกได้เพิ่ม +1 การ์ดที่เขียนเองได้ 2",
+ next:"อีก {n} แต้มจะได้: {r}",won:"ได้แล้ว! ต่างคนต่างขอจากอีกฝ่ายได้",allWon:"ได้ครบทุกขั้นแล้ว คิดรางวัลใหม่กันเลย",
+ telepathy:"โทรจิต: ทายถูก {c} จาก {n} ครั้ง",
+ meetTitle:"เจอกันครั้งหน้า",meetDays:"อีก {n} วันจะได้เจอกัน",meetToday:"วันนี้แล้ว!!",meetNone:"ยังไม่มีวันที่ เลือกสักวันสิ ประมาณก็ได้",meetPast:"วันนั้นผ่านไปแล้ว เลือกวันใหม่กันไหม",dateLbl:"วันที่",
+ jokersTitle:"โจ๊กเกอร์สัปดาห์นี้",moonRule:"พระจันทร์: ข้ามการ์ดได้โดยไม่ต้องอธิบาย สัปดาห์นี้เหลือ {n} ใบ",starRule:"ดาว: ขอให้อีกฝ่ายตอบก่อนแบบละเอียดๆ เหลือ {n} ใบ",jokersBack:"ได้คืนทุกวันจันทร์",
+ settings:"ตั้งค่า",nameLbl:"ชื่อของเธอ",langLbl:"ภาษาของเธอ",tzLbl:"เขตเวลาของเธอ",save:"บันทึก",saved:"บันทึกแล้ว",switchP:"เปลี่ยนผู้เล่นบนโทรศัพท์นี้",
+ saveErr:"บันทึกไม่สำเร็จ เช็กอินเทอร์เน็ตแล้วลองใหม่",
+ rulesTitle:"วิธีเล่น",rules:["เปิดการ์ด แบบ 'ทาย': ทายคำตอบของอีกฝ่าย (วงสีเหลือง) แล้วเลือกคำตอบของเธอ (สีน้ำเงิน)","คำตอบจะซ่อนไว้จนกว่าเราจะเล่นครบทั้งคู่","จากนั้นอ่านเกร็ดความรู้ แล้วคุยเรื่อง 'ชวนคุยกัน' ตอนโทร","รอบต่อไปจะเปิดเมื่อเราเล่นรอบก่อนด้วยกันได้สองในสาม ยิ่งเล่นยิ่งลึก","การ์ดสีเขียวครึ่งเดียว = ตอบไปคนเดียว สีเขียวเต็ม = ตอบครบทั้งคู่","ด้านบนของแท็บ 'เล่น' เลือกหมวดตามอารมณ์ของคืนนั้นได้เลย มีแค่ 'เส้นทางของเรา' ที่เปิดทีละขั้น"],
+ intimeTitle:"ก่อนเปิดการ์ดชุดนี้",intimeBody:"คำถามชุดนี้เกี่ยวกับความอ่อนโยนและความปรารถนา จะเปิดก็ต่อเมื่อเราตอบตกลงทั้งคู่ ใครจะถอนความยินยอมเมื่อไหร่ก็ได้ ไม่ต้องอธิบาย และยังใช้พระจันทร์ 🌙 ข้ามการ์ดได้เสมอ",intimeYes:"โอเค",intimeNotYet:"ยังไม่ตอบ",intimeAgree:"ฉันโอเค",intimeOff:"ถอนความยินยอม",intimeWait:"รับทราบแล้ว การ์ดจะเปิดเมื่อ {p} ตอบตกลงด้วย",clockMe:"ที่เธอ",clockP:"ที่ {p}",tomorrow:"พรุ่งนี้",yesterday:"เมื่อวาน"}
+};
+
+/* ---------- état ---------- */
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const clone=o=>JSON.parse(JSON.stringify(o));
+const lsGet=k=>{try{return localStorage.getItem(k)}catch(e){return null}};
+const lsSet=(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}};
+const myTz=(()=>{try{return Intl.DateTimeFormat().resolvedOptions().timeZone||'Pacific/Tahiti'}catch(e){return 'Pacific/Tahiti'}})();
+
+const S={mode:'boot',backend:null,slot:lsGet('moon.slot'),docs:{A:null,B:null},meta:{},custom:[],tab:lsGet('moon.tab')||'play',cat:lsGet('moon.cat')||'parcours',
+  open:null,pending:{},showAlt:{},tr:{},ai:null,lastSeen:Number(lsGet('moon.seen')||0),seenThisVisit:null,obSlot:null,trOut:''};
+
+const P=()=>S.slot==='A'?'B':'A';
+const me=()=>S.docs[S.slot];
+const pd=()=>S.docs[P()];
+const lang=()=>(me()&&me().lang)||((navigator.language||'').startsWith('th')?'th':'fr');
+const plang=()=>(pd()&&pd().lang)||(lang()==='fr'?'th':'fr');
+function t(k,v={}){let s=(I18N[lang()]||I18N.fr)[k];if(s==null)s=I18N.fr[k]??k;if(typeof s==='string')s=s.replace(/\{(\w+)\}/g,(_,x)=>v[x]??'');return s}
+const pname=()=>(pd()&&pd().name)||(lang()==='th'?'ที่รัก':'ton amour');
+const L=o=>o?(o[lang()]||o.fr||o.th):'';
+
+/* ---------- stockage : uniquement sur ce téléphone ---------- */
+const store={get(k){try{return JSON.parse(localStorage.getItem(k)||'null')}catch(e){return null}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v));return true}catch(e){return false}}};
+function saveMe(){me().updated=Date.now();if(!store.set('moon.me',me()))toast(t('saveErr'))}
+const rid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,8);
+function newDoc(){return{id:rid(),name:'',lang:lang(),tz:myTz,answers:{},reacts:{},stars:{},custom:[]}}
+function rebuildCustom(){S.custom=[];['A','B'].forEach(k=>((S.docs[k]&&S.docs[k].custom)||[]).forEach(c=>S.custom.push({...c,by:k})))}
+function meetDate(){const a=me()&&me().meet,b=pd()&&pd().meet;if(a&&b)return (a.at>=b.at?a:b).d;return (a||b||{}).d||''}
+
+/* ---------- échange par lien ---------- */
+const b64u={enc(u8){let s='';for(let i=0;i<u8.length;i+=8192)s+=String.fromCharCode.apply(null,u8.subarray(i,i+8192));return btoa(s).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'')},
+  dec(str){str=str.replace(/-/g,'+').replace(/_/g,'/');while(str.length%4)str+='=';const s=atob(str);return Uint8Array.from(s,c=>c.charCodeAt(0))}};
+async function pack(obj){const raw=new TextEncoder().encode(JSON.stringify(obj));
+  if(window.CompressionStream){try{const st=new Blob([raw]).stream().pipeThrough(new CompressionStream('deflate-raw'));return 'z'+b64u.enc(new Uint8Array(await new Response(st).arrayBuffer()))}catch(e){}}
+  return 'j'+b64u.enc(raw)}
+async function unpack(code){let u8=b64u.dec(code.slice(1));
+  if(code[0]==='z'){const st=new Blob([u8]).stream().pipeThrough(new DecompressionStream('deflate-raw'));u8=new Uint8Array(await new Response(st).arrayBuffer())}
+  return JSON.parse(new TextDecoder().decode(u8))}
+const extractCode=txt=>{const m=String(txt||'').match(/lune=([zj][A-Za-z0-9_-]+)/);return m?m[1]:null};
+async function importCode(code){
+  let d;try{d=await unpack(code)}catch(e){toast(t('badCode'));return false}
+  if(!d||d.v!==1||!d.p||!d.p.id){toast(t('badCode'));return false}
+  const doc=d.p;
+  if(doc.id===me().id){toast(t('ownCode'));return false}
+  const prev=S.docs.B;
+  if(prev&&prev.id===doc.id&&(prev.updated||0)>(doc.updated||0)){toast(t('oldCode'));return false}
+  S.docs.B=doc;store.set('moon.partner',doc);rebuildCustom();
+  toast(t('imported',{p:doc.name||pname()}));render(true);return true}
+async function shareMine(){
+  const code=await pack({v:1,p:me()});
+  const url=location.origin+location.pathname+'#lune='+code;
+  const text=I18N.fr.shareMsg.replace('{n}',me().name)+'\n'+I18N.th.shareMsg.replace('{n}',me().name)+'\n'+url;
+  me().sentAt=Date.now();store.set('moon.me',me());
+  if(navigator.share){try{await navigator.share({text});render();return}catch(e){if(e&&e.name==='AbortError'){return}}}
+  try{await navigator.clipboard.writeText(text);toast(t('copiedShare'))}catch(e){}
+  S.shareText=text;S.tab='tr';render(true);
+}
+
+/* ---------- logique de jeu ---------- */
+function wk(d=new Date()){const x=new Date(d);x.setHours(0,0,0,0);x.setDate(x.getDate()-((x.getDay()+6)%7));return x.getFullYear()+'-'+(x.getMonth()+1)+'-'+x.getDate()}
+const ans=(slot,id)=>S.docs[slot]&&S.docs[slot].answers&&S.docs[slot].answers[id];
+const both=id=>!!(ans('A',id)&&ans('B',id));
+function allCards(){return CARDS.concat(S.custom.slice().sort((a,b)=>(a.at||0)-(b.at||0)).map(c=>({id:'x_'+c.id,custom:true,lvl:'p',t:'talk',q:c.q,by:c.by})))}
+const sessionDone=s=>{const cs=CARDS.filter(c=>c.s===s);return cs.filter(c=>both(c.id)).length>=Math.ceil(cs.length*2/3)};
+const unlocked=s=>s===1||sessionDone(s-1);
+function cardPts(c){const a=ans('A',c.id),b=ans('B',c.id);if(!a||!b||a.skip||b.skip)return 0;if(c.custom)return 2;let p=LVPTS[c.lvl];if(c.t==='quiz'){if(a.mine===c.a)p++;if(b.mine===c.a)p++}if(c.t==='guess'){if(a.guess===b.mine)p++;if(b.guess===a.mine)p++}return p}
+const total=()=>allCards().reduce((n,c)=>n+cardPts(c),0);
+function telepathy(){let c=0,n=0;CARDS.filter(x=>x.t==='guess'&&both(x.id)).forEach(x=>{const a=ans('A',x.id),b=ans('B',x.id);if(a.skip||b.skip)return;n+=2;if(a.guess===b.mine)c++;if(b.guess===a.mine)c++});return{c,n}}
+const moonsLeft=()=>3-Object.values((me()&&me().answers)||{}).filter(a=>a.skip&&a.wk===wk()).length;
+const starsLeft=()=>1-Object.values((me()&&me().stars)||{}).filter(w=>w===wk()).length;
+const hash=s=>[...s].reduce((h,c)=>(h*31+c.charCodeAt(0))>>>0,7);
+
+/* ---------- dessin de lune ---------- */
+function moon(f,size=44){
+  const r=size/2-2,c=size/2;let lit='';
+  if(f>=.999)lit=`<circle cx="${c}" cy="${c}" r="${r}" fill="var(--moon-lit)"/>`;
+  else if(f>0.001){const rx=Math.abs(1-2*f)*r;lit=`<path d="M${c} ${c-r}A${r} ${r} 0 0 1 ${c} ${c+r}A${rx} ${r} 0 0 ${f<.5?0:1} ${c} ${c-r}Z" fill="var(--moon-lit)"/>`}
+  return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" aria-hidden="true"><circle cx="${c}" cy="${c}" r="${r}" fill="var(--moon-dark)"/>${lit}</svg>`;
+}
+
+/* ---------- rendu ---------- */
+function clocks(){
+  const el=$('#clocks');if(!el||!me())return;
+  const f=tz=>{try{return new Intl.DateTimeFormat('fr-FR',{hour:'2-digit',minute:'2-digit',timeZone:tz}).format(new Date())}catch(e){return '--:--'}};
+  const d=tz=>{try{return new Intl.DateTimeFormat('en-CA',{timeZone:tz}).format(new Date())}catch(e){return ''}};
+  let s=`<b>${f(me().tz)}</b> ${esc(t('clockMe'))}`;
+  if(pd()&&pd().tz){const a=d(me().tz),b=d(pd().tz);const rel=b>a?` (${t('tomorrow')})`:b<a?` (${t('yesterday')})`:'';s+=` · <b>${f(pd().tz)}</b> ${esc(t('clockP',{p:pname()}))}${esc(rel)}`}
+  el.innerHTML=s;
+}
+function keepInputs(root){const v={};root.querySelectorAll('input[id],textarea[id],select[id]').forEach(e=>v[e.id]=e.value);const a=document.activeElement&&document.activeElement.id;return()=>{Object.entries(v).forEach(([k,x])=>{const e=document.getElementById(k);if(e&&e.type!=='date')e.value=x});if(a){const e=document.getElementById(a);if(e&&root.contains(e))e.focus()}}}
+
+function render(fresh){
+  const view=$('#view');const restore=fresh?()=>{}:keepInputs(view);
+  $('#logo').innerHTML=moon(Math.min(1,total()/100)||.18,34);
+  if(me()&&me().name){document.documentElement.lang=lang();$('#brand').textContent=lang()==='th'?'เกมพระจันทร์':'Le Jeu de la Lune'}
+  clocks();
+  const tabs=$('#tabs');
+  if(S.mode==='boot'){return}
+  if(!me()||!me().name){tabs.hidden=true;view.innerHTML=onboardView();restore();return}
+  tabs.hidden=false;
+  tabs.innerHTML=['play','us','tr'].map(k=>`<button data-act="tab" data-v="${k}" aria-current="${S.tab===k}">${esc(t(k==='play'?'tabPlay':k==='us'?'tabUs':'tabTr'))}</button>`).join('');
+  view.innerHTML=(S.tab==='us'?usView():S.tab==='tr'?trView():playView());
+  restore();
+  renderSheet();
+}
+
+function onboardView(){
+  const d=me()||{};const invited=!!S.pendingCode;
+  return `<div class="center"><h2>${invited?'Tu as été invité(e) à jouer 🌙':'Bienvenue dans le Jeu de la Lune 🌙'}<br><span class="muted" style="font-size:var(--fs-m)">${invited?'มีคนชวนเธอมาเล่นเกมพระจันทร์ 🌙':'ยินดีต้อนรับสู่เกมพระจันทร์ 🌙'}</span></h2>
+  <p class="muted" style="margin:0">Pas d'inscription : tout reste sur ce téléphone. · ไม่ต้องสมัคร ทุกอย่างอยู่ในโทรศัพท์เครื่องนี้</p>
+  <div class="panel">
+    <label for="ob-name">Ton prénom · ชื่อของเธอ<input id="ob-name" maxlength="30" value="${esc(d.name||'')}"></label>
+    <label for="ob-lang">Ta langue · ภาษาของเธอ<select id="ob-lang"><option value="fr"${(d.lang||lang())==='fr'?' selected':''}>Français</option><option value="th"${(d.lang||lang())==='th'?' selected':''}>ภาษาไทย</option></select></label>
+    <label for="ob-tz">Ton fuseau horaire · เขตเวลาของเธอ<select id="ob-tz">${tzOptions(d.tz||myTz)}</select></label>
+    <button class="btn" data-act="obgo">C'est parti · เริ่มเลย</button></div></div>`;
+}
+function tzOptions(sel){const l=TZS.includes(sel)?TZS:[sel,...TZS];return l.map(z=>`<option value="${esc(z)}"${z===sel?' selected':''}>${esc(z.replace('_',' '))}</option>`).join('')}
+
+function tileHtml(c){
+  const m=ans(S.slot,c.id),p=ans(P(),c.id);
+  const cls=m&&p?'both':(m||p)?'half':'';
+  const star=pd()&&pd().stars&&pd().stars[c.id]&&!m;
+  const tag=star?'⭐ '+t('yourTurn'):(p&&!m?t('yourTurn'):'');
+  return `<button class="tile ${cls}" data-act="open" data-v="${c.id}">${tag?`<span class="tag">${esc(tag)}</span>`:''}
+   <span class="meta"><span class="dot lv-${c.lvl}"></span><span class="mono">${esc(t('t_'+c.t))} · ${esc(t('l_'+c.lvl))}</span></span>
+   <span class="q">${esc(L(c.q))}</span></button>`;
+}
+const intimeOn=()=>!!(me()&&me().intime&&pd()&&pd().intime);
+function isOpen(c){if(c.custom)return true;if(c.cat)return c.cat!=='intime'||intimeOn();return unlocked(c.s)}
+function playView(){
+  let h='<div class="stack">';
+  if(!pd()||!pd().name)h+=`<div class="news"><span class="big">${esc(t('noPartner'))}</span><button class="btn small" data-act="send" style="align-self:flex-start">📤 ${esc(t('inviteBtn'))}</button></div>`;
+  else if(unsent())h+=`<div class="news"><span>${esc(t('exUnsent',{n:unsent()}))}</span><button class="btn small" data-act="send" style="align-self:flex-start">📤 ${esc(t('sendBtn'))}</button></div>`;
+  else{
+    const seen=S.seenThisVisit??S.lastSeen;
+    const nNew=Object.values(pd().answers||{}).filter(a=>(a.at||0)>seen).length;
+    const todo=allCards().filter(c=>isOpen(c)&&ans(P(),c.id)&&!ans(S.slot,c.id)).length;
+    const stars=Object.keys(pd().stars||{}).filter(id=>!ans(S.slot,id)).length;
+    h+=`<div class="news"><span class="big">${esc(nNew?t('since',{p:pname(),n:nNew}):t('nothingNew',{p:pname()}))}</span>
+      ${todo?`<span>${esc(t('waitingCount',{n:todo,p:pname()}))}</span>`:''}${stars?`<span>${esc(t('starList',{p:pname(),n:stars}))}</span>`:''}</div>`;
+  }
+  const cur=CATS.find(x=>x.k===S.cat)||CATS[0];
+  h+=`<div class="chips" role="tablist">${CATS.map(x=>{const cs=deckCards(x.k);const todo=cs.filter(c=>isOpen(c)&&ans(P(),c.id)&&!ans(S.slot,c.id)).length;
+    return `<button class="chip" role="tab" data-act="cat" data-v="${x.k}" aria-selected="${x.k===cur.k}">${esc(L(x.n))}${todo?` <b class="cnt">${todo}</b>`:''}</button>`}).join('')}</div>
+    <div class="row" style="justify-content:space-between;flex-wrap:nowrap;gap:12px"><p class="muted" style="margin:0;font-size:var(--fs-s);min-width:0">${esc(L(cur.d))}</p>${cur.k==='intime'&&!intimeOn()?'':`<button class="btn small" data-act="surprise" style="flex:0 0 auto">🎲 ${esc(t('surprise'))}</button>`}</div>`;
+  if(cur.k==='parcours')h+=parcoursView();
+  else if(cur.k==='maison')h+=maisonView();
+  else if(cur.k==='intime'&&!intimeOn())h+=consentView();
+  else h+=deckView(cur.k);
+  return h+'</div>';
+}
+function deckCards(k){if(k==='parcours')return CARDS.filter(c=>c.s);if(k==='maison')return allCards().filter(c=>c.custom);return CARDS.filter(c=>c.cat===k)}
+function sortCards(cs){const r=c=>{const m=ans(S.slot,c.id),p=ans(P(),c.id);return !m&&p?0:!m?1:!p?2:3};return cs.slice().sort((a,b)=>r(a)-r(b))}
+function deckView(k){
+  const cs=deckCards(k);const done=cs.filter(c=>both(c.id)).length;
+  return `<section class="session"><div class="s-head">${moon(done/cs.length)}<div><span class="mono muted">${done}/${cs.length}</span><h2>${esc(L(CATS.find(x=>x.k===k).n))}</h2></div></div><div class="tiles">${sortCards(cs).map(tileHtml).join('')}</div>
+   ${k==='intime'?`<button class="linkbtn" data-act="intime" data-v="0">${esc(t('intimeOff'))}</button>`:''}</section>`;
+}
+function consentView(){
+  const mine=!!(me()&&me().intime),theirs=!!(pd()&&pd().intime);
+  return `<div class="panel"><h2>${esc(t('intimeTitle'))}</h2><p style="margin:0">${esc(t('intimeBody'))}</p>
+   <p style="margin:0" class="mono">${esc(t('you'))} : ${mine?'✓ '+esc(t('intimeYes')):esc(t('intimeNotYet'))} · ${esc(pname())} : ${theirs?'✓ '+esc(t('intimeYes')):esc(t('intimeNotYet'))}</p>
+   ${mine?`<p class="muted" style="margin:0">${esc(t('intimeWait',{p:pname()}))}</p><button class="btn ghost small" data-act="intime" data-v="0" style="align-self:flex-start">${esc(t('intimeOff'))}</button>`
+     :`<button class="btn" data-act="intime" data-v="1" style="align-self:flex-start">${esc(t('intimeAgree'))}</button>`}</div>`;
+}
+function parcoursView(){
+  let h='';
+  for(let s=1;s<=6;s++){
+    const cs=CARDS.filter(c=>c.s===s);const f=cs.filter(c=>both(c.id)).length/cs.length;const u=unlocked(s);
+    h+=`<section class="session"><div class="s-head">${moon(u?f:0)}<div><span class="mono muted">${esc(t('sess',{n:s}))} · ${cs.filter(c=>both(c.id)).length}/${cs.length}</span><h2>${esc(L(SESSIONS[s]))}</h2></div></div>`;
+    h+=u?`<div class="tiles">${cs.map(tileHtml).join('')}</div>`:`<div class="locked">${esc(t('locked',{n:s-1}))} · ${esc(t('hidden',{n:cs.length}))}</div>`;
+    h+='</section>';
+    if(!u)break;
+  }
+  return h;
+}
+function maisonView(){
+  const cu=allCards().filter(c=>c.custom);
+  return `<section class="session">${cu.length?`<div class="tiles">${cu.map(tileHtml).join('')}</div>`:`<p class="muted">${esc(t('customEmpty'))}</p>`}
+    <div class="panel"><label for="cu-q">${esc(t('customIntro',{p:pname()}))}<textarea id="cu-q" maxlength="300" placeholder="${esc(t('customPh'))}" style="min-height:70px"></textarea></label>
+    <button class="btn" data-act="cuadd" style="align-self:flex-start">${esc(t('customAdd'))}</button></div></section>`;
+}
+function usView(){
+  const pts=total();const nx=REWARDS.find(r=>r.at>pts);const prev=[...REWARDS].reverse().find(r=>r.at<=pts);
+  const base=prev?prev.at:0;const pct=nx?Math.round((pts-base)/(nx.at-base)*100):100;
+  const tp=telepathy();const md=meetDate();
+  let meet=t('meetNone');
+  if(md){const today=new Date();today.setHours(0,0,0,0);const d=new Date(md+'T00:00:00');const n=Math.round((d-today)/864e5);meet=n>0?t('meetDays',{n}):n===0?t('meetToday'):t('meetPast')}
+  const ml=Math.max(0,moonsLeft()),sl=Math.max(0,starsLeft());
+  return `<div class="stack">
+  <div class="panel"><h2>${esc(t('meetTitle'))}</h2><span class="bignum" style="font-size:var(--fs-xl)">${esc(meet)}</span>
+    <div class="row"><label for="meet" style="flex:1">${esc(t('dateLbl'))}<input id="meet" type="date" value="${esc(md||'')}"></label></div></div>
+  <div class="panel"><h2>${esc(t('potTitle'))}</h2><div class="row" style="align-items:baseline"><span class="bignum">${pts}</span><span class="muted">${esc(t('pts'))}</span></div>
+    <div class="bar"><i style="width:${pct}%"></i></div><span class="muted" style="font-size:var(--fs-s)">${esc(nx?t('next',{n:nx.at-pts,r:L(nx.r)}):t('allWon'))}</span>
+    <div>${REWARDS.map(r=>`<div class="reward ${pts>=r.at?'won':''}"><span class="pts">${r.at} pts</span><span>${esc(L(r.r))}${pts>=r.at?`<small>${esc(t('won'))}</small>`:''}</span></div>`).join('')}</div>
+    <p class="muted" style="font-size:var(--fs-s);margin:0">${esc(t('potRule'))}</p>
+    ${tp.n?`<p style="margin:0;font-weight:600">${esc(t('telepathy',tp))}</p>`:''}</div>
+  <div class="panel"><h2>${esc(t('jokersTitle'))}</h2>
+    <div class="jokers">${[0,1,2].map(i=>`<span class="${i<ml?'':'off'}">🌙</span>`).join('')} <span class="${sl?'':'off'}">⭐</span></div>
+    <p style="margin:0;font-size:var(--fs-s)">${esc(t('moonRule',{n:ml}))}<br>${esc(t('starRule',{n:sl}))}<br><span class="muted">${esc(t('jokersBack'))}</span></p></div>
+  <div class="panel"><h2>${esc(t('rulesTitle'))}</h2><ul class="rules">${t('rules').map(r=>`<li>${esc(r)}</li>`).join('')}</ul></div>
+  <div class="panel"><h2>${esc(t('settings'))}</h2>
+    <label for="st-name">${esc(t('nameLbl'))}<input id="st-name" maxlength="30" value="${esc(me().name)}"></label>
+    <label for="st-lang">${esc(t('langLbl'))}<select id="st-lang"><option value="fr"${lang()==='fr'?' selected':''}>Français</option><option value="th"${lang()==='th'?' selected':''}>ภาษาไทย</option></select></label>
+    <label for="st-tz">${esc(t('tzLbl'))}<select id="st-tz">${tzOptions(me().tz||myTz)}</select></label>
+    <div class="row"><button class="btn" data-act="stsave">${esc(t('save'))}</button></div></div>
+  </div>`;
+}
+
+function fmtDate(ts){if(!ts)return '—';try{return new Intl.DateTimeFormat(lang()==='th'?'th-TH':'fr-FR',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}).format(new Date(ts))}catch(e){return new Date(ts).toLocaleString()}}
+function unsent(){const s=me().sentAt||0;return Object.values(me().answers||{}).filter(a=>(a.at||0)>s).length}
+function trView(){
+  const n=unsent();
+  return `<div class="stack">
+  <div class="panel"><h2>${esc(t('exSend',{p:pname()}))}</h2>
+    <p style="margin:0">${esc(n?t('exUnsent',{n}):t('exAllSent'))}</p>
+    <button class="btn" data-act="send">📤 ${esc(t('sendBtn'))}</button>
+    <p class="muted" style="margin:0;font-size:var(--fs-s)">${esc(t('exLast'))} ${esc(fmtDate(me().sentAt))}</p>
+    ${S.shareText?`<label for="ex-out">${esc(t('exManual'))}<textarea id="ex-out" readonly style="min-height:90px;font-size:var(--fs-xs)">${esc(S.shareText)}</textarea></label>`:''}</div>
+  <div class="panel"><h2>${esc(t('exRecv',{p:pname()}))}</h2>
+    <label for="ex-in">${esc(t('exPaste'))}<textarea id="ex-in" style="min-height:80px" placeholder="https://…#lune=…"></textarea></label>
+    <button class="btn" data-act="receive">📥 ${esc(t('recvBtn'))}</button>
+    <p class="muted" style="margin:0;font-size:var(--fs-s)">${esc(t('exGot',{p:pname()}))} ${esc(fmtDate(pd()&&pd().updated))}</p></div>
+  <div class="panel"><h2>${esc(t('exHowTitle'))}</h2><ul class="rules">${t('exHow').map(r=>`<li>${esc(r)}</li>`).join('')}</ul></div>
+  </div>`;
+}
+
+/* ---------- fiche carte ---------- */
+function renderSheet(){
+  const sc=$('#scrim');
+  if(!S.open){sc.hidden=true;sc.innerHTML='';return}
+  const c=allCards().find(x=>x.id===S.open);if(!c){S.open=null;sc.hidden=true;return}
+  const restore=keepInputs(sc);
+  const m=ans(S.slot,c.id),p=ans(P(),c.id);const ol=lang()==='fr'?'th':'fr';
+  let h=`<div class="sheet" role="dialog" aria-modal="true" aria-label="${esc(L(c.q))}">
+   <div class="row" style="justify-content:space-between"><span class="meta row"><span class="dot lv-${c.lvl}"></span><span class="mono muted">${esc(t('t_'+c.t))} · ${esc(t('l_'+c.lvl))}${c.custom?' · '+esc(t('customBy',{p:c.by===S.slot?t('you'):pname()})):''}</span></span>
+   <button class="btn ghost small" data-act="close">${esc(t('close'))}</button></div>
+   <div class="qbig">${esc(L(c.q))}</div>
+   ${S.showAlt[c.id]?`<div class="alt" lang="${ol}">${esc(c.q[ol])}</div>`:`<button class="linkbtn" data-act="alt">${esc(t('showIn',{l:t('lname_'+ol)}))}</button>`}`;
+  if(pd()&&pd().stars&&pd().stars[c.id]&&!m)h+=`<div class="star-note">${esc(t('starFrom',{p:pname()}))}</div>`;
+  if(!m)h+=answerForm(c,p);
+  else if(!p)h+=`<div class="ans"><span class="who">${esc(t('you'))}</span>${myAnswerSummary(c,m)}</div><p class="wait">${esc(I18N[lang()].waits[hash(c.id)%4].replace('{p}',pname()))}</p>`;
+  else h+=reveal(c,m,p);
+  h+='</div>';
+  sc.innerHTML=h;sc.hidden=false;restore();
+}
+function answerForm(c,p){
+  const pe=S.pending[c.id]||{};let h='';
+  if(c.t==='guess'){
+    h+=`<div class="step g">${esc(t('guessStep',{p:pname()}))}</div><div class="opts">${c.o.map((o,i)=>`<button class="opt ${pe.guess===i?'g':''}" data-act="pick" data-k="guess" data-v="${i}" aria-pressed="${pe.guess===i}">${esc(L(o))}</button>`).join('')}</div>
+     <div class="step m">${esc(t('mineStep'))}</div><div class="opts">${c.o.map((o,i)=>`<button class="opt ${pe.mine===i?'m':''}" data-act="pick" data-k="mine" data-v="${i}" aria-pressed="${pe.mine===i}">${esc(L(o))}</button>`).join('')}</div>
+     <button class="btn" data-act="sendguess">${esc(t('send'))}</button>`;
+  }else if(c.t==='quiz'){
+    h+=`<div class="step m">${esc(t('quizStep'))}</div><div class="opts">${c.o.map((o,i)=>`<button class="opt ${pe.mine===i?'m':''}" data-act="pick" data-k="mine" data-v="${i}" aria-pressed="${pe.mine===i}">${esc(L(o))}</button>`).join('')}</div>
+     <button class="btn" data-act="sendquiz">${esc(t('send'))}</button>`;
+  }else if(c.t==='talk'){
+    h+=`<textarea id="ta-${c.id}" maxlength="2000" placeholder="${esc(t('talkPh'))}"></textarea><button class="btn" data-act="sendtalk">${esc(t('send'))}</button>`;
+  }else{
+    h+=`<textarea id="ta-${c.id}" maxlength="2000" placeholder="${esc(t('darePh'))}" style="min-height:70px"></textarea><button class="btn" data-act="senddare">${esc(t('dareDone'))}</button>`;
+  }
+  h+=`<div class="row"><button class="btn ghost small" data-act="moon">${esc(t('useMoon'))} (${Math.max(0,moonsLeft())})</button>`;
+  if(!p&&!(me().stars||{})[c.id])h+=`<button class="btn ghost small" data-act="star">${esc(t('useStar'))} (${Math.max(0,starsLeft())})</button>`;
+  h+='</div>';
+  return h+`<p class="muted" style="margin:0;font-size:var(--fs-s)">${esc(t('noPressure'))}</p>`;
+}
+function myAnswerSummary(c,a){
+  if(a.skip)return `<p>${esc(t('youSkipped'))}</p>`;
+  if(c.t==='quiz')return `<p><span class="muted">${esc(t('answered'))} :</span> ${esc(L(c.o[a.mine]))}</p>`;
+  if(c.t==='guess')return `<p><span class="muted">${esc(t('guessed'))} :</span> ${esc(L(c.o[a.guess]))}<br><span class="muted">${esc(t('answered'))} :</span> ${esc(L(c.o[a.mine]))}</p>`;
+  return a.text?`<p>${esc(a.text)}</p>`:`<p>✅</p>`;
+}
+function reveal(c,m,p){
+  let h='';
+  if(m.skip||p.skip){
+    h+=`<div class="duo"><div class="ans"><span class="who">${esc(t('you'))}</span>${myAnswerSummary(c,m)}</div><div class="ans"><span class="who">${esc(pname())}</span>${p.skip?`<p>${esc(t('skippedBy',{p:pname()}))}</p>`:partnerBody(c,p)}</div></div>`;
+    return h+extras(c);
+  }
+  if(c.t==='guess'){
+    const okMe=m.guess===p.mine,okP=p.guess===m.mine;const n=okMe+okP;
+    h+=`<div class="verdict">${esc(t('v'+n))}</div>`;
+    h+=`<div class="duo"><div class="ans"><span class="who">${esc(t('you'))}</span><p><span class="muted">${esc(t('answered'))} :</span> ${esc(L(c.o[m.mine]))}<br><span class="muted">${esc(t('guessed'))} :</span> ${esc(L(c.o[m.guess]))} <span class="${okMe?'ok':'ko'}">${okMe?'✓':'✗'}</span></p></div>
+      <div class="ans"><span class="who">${esc(pname())}</span><p><span class="muted">${esc(t('answered'))} :</span> ${esc(L(c.o[p.mine]))}<br><span class="muted">${esc(t('guessed'))} :</span> ${esc(L(c.o[p.guess]))} <span class="${okP?'ok':'ko'}">${okP?'✓':'✗'}</span></p></div></div>`;
+  }else if(c.t==='quiz'){
+    const okM=m.mine===c.a,okP=p.mine===c.a;
+    h+=`<div class="verdict">${esc(okM&&okP?t('q2'):okM?t('q1me'):okP?t('q1p',{p:pname()}):t('q0'))}</div>
+      <div class="talk"><b>${esc(t('goodAns'))}</b><br>${esc(L(c.o[c.a]))}</div>
+      <div class="duo"><div class="ans"><span class="who">${esc(t('you'))}</span><p>${esc(L(c.o[m.mine]))} <span class="${okM?'ok':'ko'}">${okM?'✓':'✗'}</span></p></div><div class="ans"><span class="who">${esc(pname())}</span><p>${esc(L(c.o[p.mine]))} <span class="${okP?'ok':'ko'}">${okP?'✓':'✗'}</span></p></div></div>`;
+  }else{
+    if(c.t==='dare')h+=`<div class="verdict">${esc(t('dareBoth'))}</div>`;
+    h+=`<div class="duo"><div class="ans"><span class="who">${esc(t('you'))}</span>${myAnswerSummary(c,m)}</div><div class="ans"><span class="who">${esc(pname())}</span>${partnerBody(c,p)}</div></div>`;
+  }
+  const mr=(me().reacts||{})[c.id],pr=(pd().reacts||{})[c.id];
+  h+=`<div class="stack" style="gap:6px"><span class="step">${esc(t('react'))}</span><div class="reacts">${EMOJIS.map(e=>`<button data-act="react" data-v="${e}" aria-pressed="${mr===e}">${e}</button>`).join('')}</div>
+     ${pr?`<span class="muted">${esc(t('theirReact',{p:pname()}))} <span style="font-size:1.3rem">${pr}</span></span>`:''}</div>`;
+  return h+extras(c);
+}
+function partnerBody(c,p){
+  if(c.t==='guess')return `<p>✓</p>`;
+  if(!p.text)return `<p>✅</p>`;
+  const tr=S.tr[c.id];
+  return `<p>${esc(p.text)}</p>${tr?`<p class="alt">${esc(tr)}</p>`:(plang()!==lang()?`<a class="linkbtn" href="https://translate.google.com/?sl=auto&tl=${lang()}&text=${encodeURIComponent(p.text)}" target="_blank" rel="noopener noreferrer">${esc(t('translate'))} ↗</a>`:'')}`;
+}
+function extras(c){
+  let h='';
+  if(c.fact)h+=`<div class="fact"><b>${esc(t('fact'))}</b><br>${esc(L(c.fact))}</div>`;
+  if(c.talk)h+=`<div class="talk"><b>💬 ${esc(t('talkAbout'))}</b><br>${esc(L(c.talk))}</div>`;
+  return h;
+}
+
+/* ---------- actions ---------- */
+let toastT;
+function toast(msg){const el=$('#toast');el.textContent=msg;el.hidden=false;clearTimeout(toastT);toastT=setTimeout(()=>el.hidden=true,2600)}
+function record(id,data){me().answers=me().answers||{};me().answers[id]={...data,at:Date.now(),wk:wk()};saveMe();delete S.pending[id];render(true);toast(t('nudge',{p:pname()}))}
+
+document.addEventListener('click',async ev=>{
+  if(ev.target.id==='scrim'){S.open=null;renderSheet();return}
+  const b=ev.target.closest('[data-act]');if(!b)return;
+  const a=b.dataset.act,v=b.dataset.v;const c=S.open&&allCards().find(x=>x.id===S.open);
+  switch(a){
+  case 'obgo':{const name=$('#ob-name').value.trim();if(!name){$('#ob-name').focus();return}
+    const d=me()||newDoc();d.name=name;d.lang=$('#ob-lang').value;d.tz=$('#ob-tz').value;S.docs.A=d;saveMe();
+    if(S.pendingCode){const c=S.pendingCode;S.pendingCode=null;await importCode(c)}render(true);break}
+  case 'tab':S.tab=v;lsSet('moon.tab',v);render(true);window.scrollTo(0,0);break;
+  case 'cat':S.cat=v;lsSet('moon.cat',v);render(true);break;
+  case 'intime':me().intime=v==='1';saveMe();render(true);break;
+  case 'open':S.open=v;renderSheet();break;
+  case 'close':S.open=null;renderSheet();break;
+  case 'alt':S.showAlt[S.open]=true;renderSheet();break;
+  case 'pick':{const pe=S.pending[S.open]=S.pending[S.open]||{};pe[b.dataset.k]=Number(v);renderSheet();break}
+  case 'sendguess':{const pe=S.pending[S.open]||{};if(pe.guess==null||pe.mine==null){toast(t('pickBoth'));return}record(S.open,{guess:pe.guess,mine:pe.mine});break}
+  case 'sendquiz':{const pe=S.pending[S.open]||{};if(pe.mine==null){toast(t('pickOne'));return}record(S.open,{mine:pe.mine});break}
+  case 'surprise':{const pool=deckCards(S.cat).filter(c=>isOpen(c)&&!ans(S.slot,c.id));if(!pool.length){toast(t('allPlayed'));return}const waiting=pool.filter(c=>ans(P(),c.id));const src=waiting.length&&Math.random()<.5?waiting:pool;const pick=src[Math.floor(Math.random()*src.length)];S.open=pick.id;renderSheet();break}
+  case 'sendtalk':{const x=$('#ta-'+S.open);const tx=x?x.value.trim():'';if(!tx){x&&x.focus();return}record(S.open,{text:tx});break}
+  case 'senddare':{const x=$('#ta-'+S.open);record(S.open,{done:true,text:x?x.value.trim():''});break}
+  case 'moon':if(moonsLeft()<=0){toast(t('noMoon'));return}record(S.open,{skip:true});break;
+  case 'star':if(starsLeft()<=0){toast(t('noStar'));return}me().stars=me().stars||{};me().stars[S.open]=wk();saveMe();toast(t('starSent',{p:pname()}));render(true);break;
+  case 'react':me().reacts=me().reacts||{};if(me().reacts[S.open]===v)delete me().reacts[S.open];else me().reacts[S.open]=v;saveMe();renderSheet();break;
+  case 'trans':{const p=ans(P(),S.open);b.textContent=t('translating');b.disabled=true;try{0}catch(e){toast(t('trErr'))}renderSheet();break}
+  case 'cuadd':{const x=$('#cu-q');const q=x.value.trim();if(!q){x.focus();return}
+    me().custom=me().custom||[];me().custom.push({id:rid(),q:{fr:q,th:q},at:Date.now()});saveMe();rebuildCustom();x.value='';toast(t('customAdded'));render(true);break}
+  case 'send':try{await shareMine()}catch(e){toast(t('saveErr'))}break;
+  case 'receive':{const c=extractCode($('#ex-in').value);if(!c){toast(t('badCode'));return}if(await importCode(c))$('#ex-in').value='';break}
+  case 'stsave':me().name=$('#st-name').value.trim()||me().name;me().lang=$('#st-lang').value;me().tz=$('#st-tz').value;saveMe();render(true);toast(t('saved'));break;
+  }
+});
+document.addEventListener('change',ev=>{
+  if(ev.target.id==='meet'){me().meet={d:ev.target.value,at:Date.now()};saveMe();render(true)}
+});
+document.addEventListener('keydown',ev=>{if(ev.key==='Escape'&&S.open){S.open=null;renderSheet()}});
+
+/* ---------- démarrage ---------- */
+function showFatal(msg){const v=$('#view');if(v)v.insertAdjacentHTML('afterbegin',`<p class="banner">Erreur · ข้อผิดพลาด : ${esc(msg)}</p>`)}
+window.addEventListener('error',e=>showFatal(e.message||'?'));
+async function boot(){
+  S.mode='local';S.slot='A';
+  S.docs.A=store.get('moon.me');S.docs.B=store.get('moon.partner');rebuildCustom();
+  const code=extractCode(location.hash);
+  if(code){try{history.replaceState(null,'',location.pathname+location.search)}catch(e){}
+    if(me()&&me().name)await importCode(code);else S.pendingCode=code}
+  if(S.seenThisVisit==null){S.seenThisVisit=S.lastSeen;lsSet('moon.seen',String(Date.now()))}
+  render(true);
+}
+window.addEventListener('hashchange',()=>{const c=extractCode(location.hash);if(c&&me()&&me().name){try{history.replaceState(null,'',location.pathname+location.search)}catch(e){}importCode(c)}});
+setInterval(clocks,30000);
+boot();
+</script>
+
+</body>
+</html>
